@@ -1,0 +1,10 @@
+{
+    "url": "https://ca.org1.example.com:7054",
+    "caName": "ca.org1.example.com",
+    "tlsCACerts": {
+        "pem": "-----BEGIN CERTIFICATE----- YOUR_CERTIFICATE_HERE -----END CERTIFICATE-----"
+    },
+    "httpOptions": {
+        "verify": false
+    }
+}
