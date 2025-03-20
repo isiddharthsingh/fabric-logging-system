@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Grid, Paper, Box, CircularProgress } from '@mui/material';
+import { Typography, Grid, Paper, Box, CircularProgress, Button } from '@mui/material';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { logsApi } from '../services/api';
+import usePageLogger from '../hooks/usePageLogger';
+import { createLog } from '../services/loggingService';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -16,34 +19,100 @@ const Dashboard = () => {
   const [resourceStats, setResourceStats] = useState([]);
   const [userStats, setUserStats] = useState([]);
   
+  // Automatically log this page visit
+  usePageLogger('Dashboard', { dashboardView: 'main' });
+  
   useEffect(() => {
     fetchLogs();
   }, []);
   
+  // Function to create a test log
+  const createTestLog = async () => {
+    try {
+      const result = await createLog(
+        'TEST_LOG', 
+        '/dashboard', 
+        'This is a test log created manually', 
+        { testValue: 'test123', timestamp: new Date().toISOString() }
+      );
+      
+      if (result) {
+        alert('Test log created successfully! Please refresh logs to see it.');
+        fetchLogs(); // Refresh logs after creating a test log
+      } else {
+        alert('Failed to create test log. Check console for errors.');
+      }
+    } catch (error) {
+      console.error('Error creating test log:', error);
+      alert('Error creating test log: ' + error.message);
+    }
+  };
+  
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await logsApi.getAllLogs();
+      setError(null);
+      console.log('Fetching logs for dashboard...');
       
-      // Handle different API response formats
-      let logsData = [];
-      if (response.data && response.data.success && response.data.logs) {
-        // Standard API response format
-        logsData = response.data.logs;
-      } else if (Array.isArray(response.data)) {
-        // Fallback for direct array format
-        logsData = response.data;
+      // Use a single comprehensive method to reduce API calls
+      console.log('Using reliable logs method...');
+      const reliableResponse = await logsApi.getReliableLogs();
+      
+      let combinedLogs = [];
+      
+      if (reliableResponse?.data?.success && Array.isArray(reliableResponse?.data?.logs)) {
+        console.log(`Retrieved ${reliableResponse.data.logs.length} logs using reliable method`);
+        combinedLogs = [...reliableResponse.data.logs];
       }
       
-      setLogs(logsData);
+      // Only use standard endpoint as fallback if we got no logs from reliable method
+      if (combinedLogs.length === 0) {
+        try {
+          console.log('Trying standard endpoint...');
+          const response = await logsApi.getAllLogs();
+          
+          if (response.data && response.data.success && Array.isArray(response.data.logs)) {
+            combinedLogs = [...combinedLogs, ...response.data.logs];
+            console.log(`Retrieved ${response.data.logs.length} logs from standard endpoint`);
+          }
+        } catch (error) {
+          console.error('Error fetching logs via standard method:', error);
+        }
+      }
       
-      // Process data for charts
-      processChartData(logsData);
+      // Filter out recent API_REQUEST logs to prevent recursive logging
+      const twoMinutesAgo = new Date();
+      twoMinutesAgo.setMinutes(twoMinutesAgo.getMinutes() - 2);
       
+      const filteredLogs = combinedLogs.filter(log => {
+        // For API_REQUEST logs, only keep the older ones
+        if (log.action === 'API_REQUEST') {
+          return new Date(log.timestamp) < twoMinutesAgo;
+        }
+        // Keep all other log types regardless of timestamp
+        return true;
+      });
+      
+      console.log(`Filtered out ${combinedLogs.length - filteredLogs.length} recent API_REQUEST logs`);
+      
+      // Deduplicate logs
+      const uniqueLogMap = {};
+      filteredLogs.forEach(log => {
+        const key = log.id;
+        if (!uniqueLogMap[key] || new Date(log.timestamp) > new Date(uniqueLogMap[key].timestamp)) {
+          uniqueLogMap[key] = log;
+        }
+      });
+      
+      const uniqueLogs = Object.values(uniqueLogMap);
+      console.log(`Total unique logs for dashboard: ${uniqueLogs.length}`);
+      
+      setLogs(uniqueLogs);
+      processChartData(uniqueLogs);
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching logs:', err);
-      setError('Failed to fetch logs data. Please try again later.');
+      console.error('Error fetching logs for dashboard:', err);
+      setError('Failed to fetch logs. Please try again.');
       setLoading(false);
     }
   };
@@ -119,7 +188,26 @@ const Dashboard = () => {
   
   return (
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" className="page-title">Dashboard</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" className="page-title">Dashboard</Typography>
+        <Box>
+          <Button 
+            variant="outlined" 
+            onClick={fetchLogs} 
+            sx={{ mr: 2 }}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh Logs
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={createTestLog}
+            color="primary"
+          >
+            Create Test Log
+          </Button>
+        </Box>
+      </Box>
       
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>

@@ -14,6 +14,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { logsApi } from '../services/api';
+import usePageLogger from '../hooks/usePageLogger';
 
 const CreateLog = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +28,9 @@ const CreateLog = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // Automatically log this page visit
+  usePageLogger('CreateLog', { form: 'create_log' });
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,7 +75,26 @@ const CreateLog = () => {
         metadata: metadataObj
       });
       
-      setSuccess(`Log created successfully with ID: ${response.data.logId}`);
+      if (response && response.data && response.data.success && response.data.logId) {
+        // Save the created log ID to localStorage
+        localStorage.setItem('last_created_log_id', response.data.logId);
+        
+        // Also add to recent logs array
+        const recentLogs = JSON.parse(localStorage.getItem('recent_logs') || '[]');
+        if (!recentLogs.includes(response.data.logId)) {
+          recentLogs.push(response.data.logId);
+          // Keep only the 10 most recent logs
+          if (recentLogs.length > 10) {
+            recentLogs.splice(0, recentLogs.length - 10);
+          }
+          localStorage.setItem('recent_logs', JSON.stringify(recentLogs));
+        }
+        
+        console.log(`Saved log ID ${response.data.logId} to localStorage for future retrieval`);
+        setSuccess(`Log created successfully with ID: ${response.data.logId}`);
+      } else {
+        throw new Error('Invalid response from server');
+      }
       
       // Reset form
       setFormData({

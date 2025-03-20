@@ -1,8 +1,12 @@
 import React from 'react';
 import { Box, Typography, Button, Paper } from '@mui/material';
 import { Link } from 'react-router-dom';
+import usePageLogger from '../hooks/usePageLogger';
 
 const PageNotFound = () => {
+  // Log the 404 page visit
+  usePageLogger('PageNotFound', { path: window.location.pathname });
+
   return (
     <Box
       sx={{

@@ -19,6 +19,7 @@ import {
 import { logsApi } from '../services/api';
 import moment from 'moment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import usePageLogger from '../hooks/usePageLogger';
 
 const UserLogs = () => {
   const { userId } = useParams();
@@ -30,6 +31,9 @@ const UserLogs = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
+  // Automatically log this page visit with the user ID
+  usePageLogger('UserLogs', { userId: userId });
+
   useEffect(() => {
     fetchUserLogs();
   }, [userId]);
