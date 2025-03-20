@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { enrollAdmin } = require('./fabric/network');
+const loggingMiddleware = require('./middleware/loggingMiddleware');
 require('dotenv').config();
 
 // Import routes
@@ -16,6 +17,9 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Apply the automatic logging middleware to all routes
+app.use(loggingMiddleware);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
