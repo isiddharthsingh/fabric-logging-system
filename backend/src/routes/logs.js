@@ -1,31 +1,115 @@
 const express = require('express');
 const router = express.Router();
 const { connectToContract } = require('../fabric/network');
+const { 
+  queryLogsFromCouchDB, 
+  getLogsByActionFromCouchDB, 
+  getLogByIdFromCouchDB,
+  getCouchDBConnection,
+  COUCHDB_DATABASE
+} = require('../utils/couchdb');
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Helper function to process log metadata
- * Ensures metadata is a proper object, not a string
+ * Process log metadata to ensure it's in the correct format
+ * This is critical for logs coming from various sources
  */
-const processLogMetadata = (log) => {
-  const processedLog = { ...log };
+function processLogMetadata(log) {
+  if (!log) return null;
   
-  // Ensure metadata exists and is properly formatted
-  if (!processedLog.metadata) {
-    processedLog.metadata = {};
-  } else if (typeof processedLog.metadata === 'string') {
-    try {
-      // Try to parse the metadata if it's a JSON string
-      processedLog.metadata = JSON.parse(processedLog.metadata);
-    } catch (e) {
-      // If parsing fails, set to empty object
-      console.error(`Failed to parse metadata for log ${processedLog.id}: ${e.message}`);
-      processedLog.metadata = {};
+  try {
+    // Create a sanitized copy of the log
+    const sanitizedLog = { ...log };
+    
+    // Handle case where metadata might be stored as a string instead of an object
+    if (typeof sanitizedLog.metadata === 'string') {
+      try {
+        sanitizedLog.metadata = JSON.parse(sanitizedLog.metadata);
+      } catch (parseError) {
+        console.warn(`Cannot parse metadata for log ${sanitizedLog.id}, treating as raw string`);
+        // If it can't be parsed as JSON, store it as an object with a raw property
+        sanitizedLog.metadata = { raw: sanitizedLog.metadata };
+      }
     }
+    
+    // Ensure metadata exists (required by schema validation)
+    if (!sanitizedLog.metadata) {
+      sanitizedLog.metadata = {};
+    }
+    
+    return sanitizedLog;
+  } catch (error) {
+    console.error(`Error processing log metadata: ${error}`);
+    // Return the original log with an empty metadata object to prevent validation errors
+    return {
+      ...log,
+      metadata: log.metadata || {}
+    };
   }
+}
+
+/**
+ * Fix blockchain log data to ensure it has properly formatted fields
+ * This handles several edge cases in the blockchain data
+ */
+function sanitizeBlockchainLog(log) {
+  if (!log) return null;
   
-  return processedLog;
-};
+  try {
+    // Make a copy to avoid modifying the original
+    let sanitizedLog = typeof log === 'string' ? JSON.parse(log) : { ...log };
+    
+    // Ensure required fields exist
+    sanitizedLog.id = sanitizedLog.id || `LOG${Math.random().toString(36).substring(2, 15)}`;
+    sanitizedLog.userId = sanitizedLog.userId || 'unknown_user';
+    sanitizedLog.action = sanitizedLog.action || 'UNKNOWN';
+    sanitizedLog.resource = sanitizedLog.resource || 'unknown_resource';
+    sanitizedLog.timestamp = sanitizedLog.timestamp || new Date().toISOString();
+    sanitizedLog.description = sanitizedLog.description || '';
+    
+    // Special handling for API_REQUEST logs with common string metadata pattern
+    if (sanitizedLog.action === 'API_REQUEST' && 
+        typeof sanitizedLog.metadata === 'string' && 
+        (sanitizedLog.metadata.startsWith('GET ') || 
+         sanitizedLog.metadata.startsWith('POST ') || 
+         sanitizedLog.metadata.startsWith('PUT ') || 
+         sanitizedLog.metadata.startsWith('DELETE '))) {
+      
+      const parts = sanitizedLog.metadata.split(' ');
+      sanitizedLog.metadata = {
+        requestType: parts[0],
+        requestPath: parts[1] || '',
+        rawRequest: sanitizedLog.metadata
+      };
+    }
+    // Other string metadata
+    else if (typeof sanitizedLog.metadata === 'string') {
+      try {
+        sanitizedLog.metadata = JSON.parse(sanitizedLog.metadata);
+      } catch (e) {
+        sanitizedLog.metadata = { raw: sanitizedLog.metadata };
+      }
+    }
+    // Ensure metadata is an object
+    else if (!sanitizedLog.metadata || typeof sanitizedLog.metadata !== 'object') {
+      sanitizedLog.metadata = {};
+    }
+    
+    return sanitizedLog;
+  } catch (error) {
+    console.error(`Error sanitizing blockchain log: ${error}`);
+    // Return a valid object with empty metadata
+    return {
+      id: log.id || `LOG${Math.random().toString(36).substring(2, 15)}`,
+      userId: log.userId || 'unknown_user',
+      action: log.action || 'ERROR',
+      resource: log.resource || 'error_processing',
+      timestamp: log.timestamp || new Date().toISOString(),
+      description: log.description || 'Error processing log data',
+      metadata: {}
+    };
+  }
+}
 
 /**
  * GET /api/logs/user/:userId
@@ -35,6 +119,24 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
+    // Try to get logs directly from CouchDB first for better performance
+    const logsFromCouchDB = await getLogsByUserFromCouchDB(userId);
+    
+    if (logsFromCouchDB && logsFromCouchDB.length > 0) {
+      // Process logs to ensure metadata is correctly formatted
+      const logs = logsFromCouchDB.map(processLogMetadata);
+      console.log(`Retrieved ${logs.length} logs for user ${userId} directly from CouchDB`);
+      
+      return res.status(200).json({
+        success: true,
+        logs,
+        source: 'couchdb'
+      });
+    }
+    
+    // Fallback to blockchain query if no logs found in CouchDB
+    console.log(`No logs found in CouchDB for user ${userId}, falling back to blockchain query`);
+
     // Connect to the network and contract
     const { gateway, contract } = await connectToContract();
 
@@ -43,14 +145,15 @@ router.get('/user/:userId', async (req, res) => {
     const logsFromChain = JSON.parse(result.toString());
     
     // Process logs to ensure metadata is correctly formatted
-    const logs = logsFromChain.map(processLogMetadata);
+    const logs = logsFromChain.map(sanitizeBlockchainLog).map(processLogMetadata);
 
     // Disconnect from the gateway
     gateway.disconnect();
 
     res.status(200).json({
       success: true,
-      logs
+      logs,
+      source: 'blockchain'
     });
   } catch (error) {
     console.error(`Failed to get logs by user ID: ${error}`);
@@ -69,33 +172,83 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/action/:action', async (req, res) => {
   try {
     const { action } = req.params;
-
-    // Connect to the network and contract
-    const { gateway, contract } = await connectToContract();
-
-    // Query logs by action
-    const result = await contract.evaluateTransaction('GetLogsByAction', action);
-    const logsFromChain = JSON.parse(result.toString());
     
-    // Process logs to ensure metadata is correctly formatted
-    const logs = logsFromChain.map(processLogMetadata);
+    if (!action) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action parameter is required'
+      });
+    }
 
-    // Disconnect from the gateway
-    gateway.disconnect();
+    console.log(`Fetching logs for action: ${action}`);
+    
+    // Try to get logs directly from CouchDB first for better performance
+    try {
+      const logsFromCouchDB = await getLogsByActionFromCouchDB(action);
+      
+      if (logsFromCouchDB && logsFromCouchDB.length > 0) {
+        // Process logs to ensure metadata is correctly formatted
+        const logs = logsFromCouchDB.map(processLogMetadata);
+        console.log(`Retrieved ${logs.length} logs for action ${action} directly from CouchDB`);
+        
+        return res.status(200).json({
+          success: true,
+          logs,
+          source: 'couchdb'
+        });
+      }
+    } catch (couchdbError) {
+      console.error(`Error querying CouchDB for action ${action}:`, couchdbError);
+      // Continue to blockchain fallback
+    }
+    
+    // Fallback to blockchain query if no logs found in CouchDB
+    console.log(`No logs found in CouchDB for action ${action}, falling back to blockchain query`);
 
-    res.status(200).json({
-      success: true,
-      logs
-    });
+    try {
+      // Connect to the network and contract
+      const { gateway, contract } = await connectToContract();
+
+      // Query logs by action
+      const result = await contract.evaluateTransaction('GetLogsByAction', action);
+      const logsFromChain = JSON.parse(result.toString());
+      
+      // Process logs to ensure metadata is correctly formatted
+      const logs = logsFromChain.map(sanitizeBlockchainLog).map(processLogMetadata);
+
+      // Disconnect from the gateway
+      gateway.disconnect();
+
+      res.status(200).json({
+        success: true,
+        logs,
+        source: 'blockchain'
+      });
+    } catch (blockchainError) {
+      console.error(`Error querying blockchain for action ${action}:`, blockchainError);
+      
+      // Instead of returning a 500 error, return an empty array
+      // This is more robust as some action types might not exist in the system
+      res.status(200).json({
+        success: true,
+        logs: [],
+        source: 'error',
+        message: `No logs found for action ${action}`
+      });
+    }
   } catch (error) {
     console.error(`Failed to get logs by action: ${error}`);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get logs by action',
-      error: error.message
+    // Return empty array instead of error
+    res.status(200).json({
+      success: true,
+      logs: [],
+      source: 'error',
+      message: 'Error processing request'
     });
   }
 });
+
+// This function is now imported from couchdb.js
 
 /**
  * GET /api/logs/resource/:resource
@@ -113,7 +266,7 @@ router.get('/resource/:resource', async (req, res) => {
     const logsFromChain = JSON.parse(result.toString());
     
     // Process logs to ensure metadata is correctly formatted
-    const logs = logsFromChain.map(processLogMetadata);
+    const logs = logsFromChain.map(sanitizeBlockchainLog).map(processLogMetadata);
 
     // Disconnect from the gateway
     gateway.disconnect();
@@ -147,6 +300,24 @@ router.get('/timerange', async (req, res) => {
       });
     }
 
+    // Try to get logs directly from CouchDB first for better performance
+    const logsFromCouchDB = await getLogsByTimeRangeFromCouchDB(startTime, endTime);
+    
+    if (logsFromCouchDB && logsFromCouchDB.length > 0) {
+      // Process logs to ensure metadata is correctly formatted
+      const logs = logsFromCouchDB.map(processLogMetadata);
+      console.log(`Retrieved ${logs.length} logs for time range directly from CouchDB`);
+      
+      return res.status(200).json({
+        success: true,
+        logs,
+        source: 'couchdb'
+      });
+    }
+    
+    // Fallback to blockchain query if no logs found in CouchDB
+    console.log(`No logs found in CouchDB for the specified time range, falling back to blockchain query`);
+
     // Connect to the network and contract
     const { gateway, contract } = await connectToContract();
 
@@ -155,14 +326,15 @@ router.get('/timerange', async (req, res) => {
     const logsFromChain = JSON.parse(result.toString());
     
     // Process logs to ensure metadata is correctly formatted
-    const logs = logsFromChain.map(processLogMetadata);
+    const logs = logsFromChain.map(sanitizeBlockchainLog).map(processLogMetadata);
 
     // Disconnect from the gateway
     gateway.disconnect();
 
     res.status(200).json({
       success: true,
-      logs
+      logs,
+      source: 'blockchain'
     });
   } catch (error) {
     console.error(`Failed to get logs by time range: ${error}`);
@@ -182,6 +354,24 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Try to get the log directly from CouchDB first for better performance
+    const logFromCouchDB = await getLogByIdFromCouchDB(id);
+    
+    if (logFromCouchDB) {
+      // Process log to ensure metadata is correctly formatted
+      const log = processLogMetadata(logFromCouchDB);
+      console.log(`Retrieved log ${id} directly from CouchDB`);
+      
+      return res.status(200).json({
+        success: true,
+        log,
+        source: 'couchdb'
+      });
+    }
+    
+    // Fallback to blockchain query if not found in CouchDB
+    console.log(`Log ${id} not found in CouchDB, falling back to blockchain query`);
+    
     // Connect to the network and contract
     const { gateway, contract } = await connectToContract();
 
@@ -190,15 +380,17 @@ router.get('/:id', async (req, res) => {
     const logFromChain = JSON.parse(result.toString());
     
     // Process log to ensure metadata is correctly formatted
-    const log = processLogMetadata(logFromChain);
+    const log = processLogMetadata(sanitizeBlockchainLog(logFromChain));
 
     // Disconnect from the gateway
     gateway.disconnect();
 
     res.status(200).json({
       success: true,
-      log
+      log,
+      source: 'blockchain'
     });
+
   } catch (error) {
     console.error(`Failed to get log by ID: ${error}`);
     res.status(500).json({
@@ -215,203 +407,69 @@ router.get('/:id', async (req, res) => {
  */
 router.get('/', async (req, res) => {
   try {
-    // Connect to the network and contract
-    const { gateway, contract } = await connectToContract();
-    console.log('Connected to Fabric network for log retrieval');
-
-    // Initialize combined logs array and tracking set to avoid duplicates
-    let allLogs = [];
-    const logIds = new Set();
-
-    // Helper function to sanitize log data
-    const sanitizeLog = (log) => {
-      if (!log) return null;
-      
-      try {
-        // Ensure log is an object
-        const sanitizedLog = typeof log === 'string' ? JSON.parse(log) : { ...log };
-        
-        // Ensure required fields exist
-        sanitizedLog.id = sanitizedLog.id || `LOG${Math.random().toString(36).substring(2, 15)}`;
-        sanitizedLog.userId = sanitizedLog.userId || 'unknown_user';
-        sanitizedLog.action = sanitizedLog.action || 'UNKNOWN';
-        sanitizedLog.resource = sanitizedLog.resource || 'unknown_resource';
-        sanitizedLog.timestamp = sanitizedLog.timestamp || new Date().toISOString();
-        sanitizedLog.description = sanitizedLog.description || '';
-        
-        // Handle metadata properly
-        if (!sanitizedLog.metadata) {
-          sanitizedLog.metadata = {};
-        } else if (typeof sanitizedLog.metadata === 'string') {
-          // Process string metadata more carefully
-          try {
-            // Check if it's already valid JSON
-            const parsedMetadata = JSON.parse(sanitizedLog.metadata);
-            sanitizedLog.metadata = parsedMetadata;
-          } catch (parseError) {
-            // Handle special cases for automatic logs
-            if (sanitizedLog.metadata.startsWith('GET ') || 
-                sanitizedLog.metadata.startsWith('POST ') || 
-                sanitizedLog.metadata.startsWith('PUT ') || 
-                sanitizedLog.metadata.startsWith('DELETE ')) {
-              
-              // Convert HTTP request strings to a proper object
-              const requestType = sanitizedLog.metadata.split(' ')[0];
-              const requestPath = sanitizedLog.metadata.split(' ')[1] || '';
-              
-              sanitizedLog.metadata = { 
-                requestType: requestType,
-                requestPath: requestPath,
-                rawRequest: sanitizedLog.metadata,
-                auto_generated: true
-              };
-            } else {
-              // Just store as string property for any other unparseable string
-              sanitizedLog.metadata = { 
-                value: sanitizedLog.metadata,
-                parseError: parseError.message
-              };
-            }
-          }
-        } else if (typeof sanitizedLog.metadata !== 'object') {
-          // Handle non-object, non-string metadata
-          sanitizedLog.metadata = { value: String(sanitizedLog.metadata) };
-        }
-        
-        return sanitizedLog;
-      } catch (error) {
-        console.error('Error sanitizing log:', error);
-        // Return a valid object even if we encounter errors
-        return {
-          id: `LOG${Math.random().toString(36).substring(2, 15)}`,
-          userId: 'error_user',
-          action: 'ERROR',
-          resource: 'log_sanitization',
-          timestamp: new Date().toISOString(),
-          description: 'Error sanitizing log data',
-          metadata: { 
-            error: error.message,
-            originalLogId: log.id || 'unknown'
-          }
-        };
-      }
-    };
-
+    console.log('Fetching all logs with fallback strategy...');
+    
+    // Try to get logs directly from CouchDB first for better performance
     try {
-      // Query all logs using the standard method
-      console.log('Executing GetAllLogs transaction...');
-      const result = await contract.evaluateTransaction('GetAllLogs');
+      const logsFromCouchDB = await queryLogsFromCouchDB();
       
-      try {
-        const logsFromChain = JSON.parse(result.toString());
-        console.log(`Retrieved ${logsFromChain.length} logs from blockchain using GetAllLogs`);
+      if (logsFromCouchDB && Array.isArray(logsFromCouchDB) && logsFromCouchDB.length > 0) {
+        console.log(`Successfully retrieved ${logsFromCouchDB.length} logs directly from CouchDB`);
         
-        // Add logs to combined result, tracking IDs to avoid duplicates
-        logsFromChain.forEach(log => {
-          const sanitizedLog = sanitizeLog(log);
-          if (sanitizedLog && !logIds.has(sanitizedLog.id)) {
-            logIds.add(sanitizedLog.id);
-            allLogs.push(sanitizedLog);
-          }
+        // Process each log to ensure metadata is correctly formatted
+        const logs = logsFromCouchDB.map(log => processLogMetadata(log));
+        
+        return res.status(200).json({
+          success: true,
+          logs,
+          source: 'couchdb'
         });
-      } catch (parseError) {
-        console.error(`Error parsing logs from GetAllLogs: ${parseError}`);
+      } else {
+        console.log('No logs found in CouchDB or invalid response, falling back to blockchain query');
       }
-
-      // Try additional query methods to get more logs
-
-      // 1. Query by time range (last 30 days)
-      try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const startTime = thirtyDaysAgo.toISOString();
-        const endTime = new Date().toISOString();
-        
-        console.log(`Querying logs by time range: ${startTime} to ${endTime}`);
-        const timeRangeResult = await contract.evaluateTransaction('GetLogsByTimeRange', startTime, endTime);
-        
-        if (timeRangeResult) {
-          const timeRangeLogs = JSON.parse(timeRangeResult.toString());
-          console.log(`Retrieved ${timeRangeLogs.length} logs by time range`);
-          
-          timeRangeLogs.forEach(log => {
-            const sanitizedLog = sanitizeLog(log);
-            if (sanitizedLog && !logIds.has(sanitizedLog.id)) {
-              logIds.add(sanitizedLog.id);
-              allLogs.push(sanitizedLog);
-            }
-          });
-        }
-      } catch (timeRangeError) {
-        console.error(`Error querying logs by time range: ${timeRangeError}`);
-      }
-
-      // 2. Query by common actions
-      const actions = [
-        "LOGIN", 
-        "LOGOUT", 
-        "CREATE", 
-        "UPDATE", 
-        "DELETE", 
-        "VIEW", 
-        "API_CALL", 
-        "PAGE_VISIT", 
-        "API_REQUEST",
-        "TEST_LOG"
-      ];
+    } catch (couchdbError) {
+      console.error('Error querying CouchDB:', couchdbError);
+      // Continue to blockchain fallback
+    }
+    
+    // Fallback to blockchain query
+    console.log('Falling back to blockchain query for all logs');
+    
+    try {
+      // Connect to the network and contract
+      const { gateway, contract } = await connectToContract();
       
-      for (const action of actions) {
-        try {
-          console.log(`Querying logs by action: ${action}`);
-          const actionResult = await contract.evaluateTransaction('GetLogsByAction', action);
-          
-          if (actionResult) {
-            const actionLogs = JSON.parse(actionResult.toString());
-            console.log(`Retrieved ${actionLogs.length} logs for action: ${action}`);
-            
-            actionLogs.forEach(log => {
-              const sanitizedLog = sanitizeLog(log);
-              if (sanitizedLog && !logIds.has(sanitizedLog.id)) {
-                logIds.add(sanitizedLog.id);
-                allLogs.push(sanitizedLog);
-              }
-            });
-          }
-        } catch (actionError) {
-          console.error(`Error querying logs for action ${action}: ${actionError}`);
-        }
-      }
-
-      // Sort logs by timestamp in descending order (newest first)
-      allLogs.sort((a, b) => {
-        return new Date(b.timestamp) - new Date(a.timestamp);
-      });
-
-      console.log(`Total combined unique logs: ${allLogs.length}`);
-
+      // Get all logs from the blockchain
+      const result = await contract.evaluateTransaction('GetAllLogs');
+      const logsFromChain = JSON.parse(result.toString());
+      
       // Disconnect from the gateway
       gateway.disconnect();
-
-      res.status(200).json({
-        success: true,
-        logs: allLogs
-      });
-    } catch (chainError) {
-      console.error(`Error retrieving logs: ${chainError}`);
-      gateway.disconnect();
       
-      res.status(500).json({
-        success: false,
-        message: 'Failed to retrieve logs',
-        error: chainError.message
+      // Make sure we have an array of logs
+      if (!Array.isArray(logsFromChain)) {
+        throw new Error('Invalid response format: expected array of logs');
+      }
+      
+      // Process each log to ensure metadata is correctly formatted
+      const logs = logsFromChain.map(sanitizeBlockchainLog).map(processLogMetadata);
+      
+      console.log(`Successfully retrieved ${logs.length} logs from blockchain`);
+      
+      return res.status(200).json({
+        success: true,
+        logs,
+        source: 'blockchain'
       });
+    } catch (blockchainError) {
+      console.error('Error querying blockchain:', blockchainError);
+      throw blockchainError; // Let the main catch handle it
     }
   } catch (error) {
-    console.error(`Failed to connect to Fabric: ${error}`);
-    
+    console.error(`Failed to retrieve logs: ${error}`);
     res.status(500).json({
       success: false,
-      message: 'Failed to connect to blockchain network',
+      message: 'Failed to retrieve logs',
       error: error.message
     });
   }

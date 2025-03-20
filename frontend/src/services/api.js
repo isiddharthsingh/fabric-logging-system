@@ -42,19 +42,47 @@ api.interceptors.request.use(
 export const logsApi = {
   // Get all logs
   getAllLogs: async () => {
-    return api.get('/logs');
+    console.log('Fetching all logs...');
+    try {
+      // Use the optimized endpoint which now has direct CouchDB access
+      const response = await api.get('/logs');
+      console.log(`Retrieved ${response.data.logs?.length || 0} logs from ${response.data.source || 'unknown source'}`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching all logs:', error);
+      throw error;
+    }
   },
   
   getLogById: async (logId) => {
     if (!logId) {
       throw new Error('Log ID is required');
     }
-    return api.get(`/logs/${logId}`);
+    
+    console.log(`Fetching log by ID: ${logId}`);
+    try {
+      // Use the optimized endpoint which now has direct CouchDB access
+      const response = await api.get(`/logs/${logId}`);
+      console.log(`Retrieved log from ${response.data.source || 'unknown source'}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching log ${logId}:`, error);
+      throw error;
+    }
   },
   
   // Get logs by user ID
   getLogsByUser: async (userId) => {
-    return api.get(`/logs/user/${userId}`);
+    console.log(`Fetching logs for user: ${userId}`);
+    try {
+      // Use the optimized endpoint which now has direct CouchDB access
+      const response = await api.get(`/logs/user/${userId}`);
+      console.log(`Retrieved ${response.data.logs?.length || 0} logs from ${response.data.source || 'unknown source'}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching logs for user ${userId}:`, error);
+      throw error;
+    }
   },
   
   // Get logs by action
@@ -62,7 +90,17 @@ export const logsApi = {
     if (!action) {
       throw new Error('Action is required');
     }
-    return api.get(`/logs/action/${action}`);
+    
+    console.log(`Fetching logs for action: ${action}`);
+    try {
+      // Use the optimized endpoint which now has direct CouchDB access
+      const response = await api.get(`/logs/action/${action}`);
+      console.log(`Retrieved ${response.data.logs?.length || 0} logs from ${response.data.source || 'unknown source'}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching logs for action ${action}:`, error);
+      throw error;
+    }
   },
   
   // Create a new log
@@ -80,127 +118,114 @@ export const logsApi = {
     }
     
     try {
-      console.log(`Fetching logs for user ${userId}...`);
-      const response = await api.get(`/logs/user/${userId}`);
+      console.log(`Fetching page visit logs for user ${userId}...`);
+      // Use the optimized endpoint which now has direct CouchDB access
+      const response = await api.get(`/logs/action/PAGE_VISIT`);
       
       if (response.data && response.data.logs) {
-        return response;
-      } else if (response.data && response.data.success && Array.isArray(response.data.logs)) {
-        return response;
+        // Filter logs to only show those for the current user
+        const userLogs = response.data.logs.filter(log => log.userId === userId);
+        console.log(`Retrieved ${userLogs.length} page visit logs for current user`);
+        return { data: { logs: userLogs, source: response.data.source } };
       } else {
-        console.log('Invalid response format for user logs:', response.data);
+        console.log('Invalid response format for page visit logs:', response.data);
         return { data: { logs: [] } };
       }
     } catch (error) {
-      console.error('Error fetching user logs:', error);
+      console.error('Error fetching page visit logs:', error);
       return { data: { logs: [] } };
     }
   },
   
-  // WORKAROUND: Fetch static pre-defined logs as a reliable fallback
+  // Get reliable logs with optimized approach
   getReliableLogs: async () => {
-    // These are the log IDs we know exist in the system
-    const knownLogIds = [
-      "LOG323e6c552711",
-      "LOGd03ec70d408d",
-      "LOG6e5199df289b", 
-      "LOG84648fdcc0ce", 
-      "LOGe0e0c0491747", 
-      "LOG35346ca5d641", 
-      "LOG4a4a1ac4f544", 
-      "LOGbb00326fcacc", 
-      "LOG4501d9d1e1dd",
-      "LOG22c95c98fd5f",
-      "LOG1230c0b38339",  // LOGIN action log
-      "LOG8965f44a339a",  // Test log
-      "LOG105805336773"   // ERROR log
-    ];
-    
-    // Get recent logs from localStorage
-    const recentLogs = [];
-    const lastCreatedLogId = localStorage.getItem('last_created_log_id');
-    if (lastCreatedLogId) {
-      knownLogIds.push(lastCreatedLogId);
-    }
-    
-    // Try to get all user logs first through bulk operations
+    // First try using the optimized endpoint with direct CouchDB access
     try {
-      // First try the standard method which should work most of the time
-      console.log('Attempting standard logs API...');
+      console.log('Fetching logs using optimized CouchDB approach...');
       const response = await api.get('/logs');
       
       if (response.data && response.data.success && Array.isArray(response.data.logs)) {
-        const logs = response.data.logs;
-        
-        console.log(`Retrieved ${logs.length} logs from standard method`);
-        
-        // Scan through logs to look for specific action types (they may be missing)
-        const actions = new Set(logs.map(log => log.action));
-        const criticalActions = ['LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'ERROR'];
-        
-        // If any critical action types are missing from the bulk fetch, we'll need to fetch individually
-        const missingActions = criticalActions.filter(action => !actions.has(action));
-        
-        if (missingActions.length === 0) {
-          console.log('All critical log types are present in bulk results');
-          return response; // All good, return the standard result
-        } else {
-          console.log(`Missing critical action types: ${missingActions.join(', ')}. Will try individual fetching.`);
-          // Continue to individual fetching
-        }
+        console.log(`Retrieved ${response.data.logs.length} logs from ${response.data.source || 'unknown source'}`);
+        return response;
       }
     } catch (standardError) {
-      console.error('Error in standard log fetch attempt:', standardError);
+      console.error('Error in optimized log fetch attempt:', standardError);
     }
     
-    // Try to get any recent page visit logs
+    // If the main endpoint fails, try getting logs by ID
     try {
-      const userId = localStorage.getItem('user_id');
-      if (userId) {
-        // First try to get the user's logs
-        try {
-          console.log(`Fetching logs for user ${userId}...`);
-          const userLogsResponse = await api.get(`/logs/user/${userId}`);
-          if (userLogsResponse && userLogsResponse.data && userLogsResponse.data.logs && userLogsResponse.data.logs.length > 0) {
-            console.log(`Retrieved ${userLogsResponse.data.logs.length} logs for user ${userId}`);
-            return userLogsResponse;
+      console.log('Trying to get recent logs by ID...');
+      // Get recent logs from localStorage
+      const recentLogIds = JSON.parse(localStorage.getItem('recent_logs') || '[]');
+      const lastCreatedLogId = localStorage.getItem('last_created_log_id');
+      
+      if (lastCreatedLogId && !recentLogIds.includes(lastCreatedLogId)) {
+        recentLogIds.push(lastCreatedLogId);
+      }
+      
+      if (recentLogIds.length > 0) {
+        const logs = [];
+        
+        for (const logId of recentLogIds) {
+          try {
+            const response = await api.get(`/logs/${logId}`);
+            if (response.data && response.data.success && response.data.log) {
+              logs.push(response.data.log);
+            }
+          } catch (error) {
+            console.error(`Error fetching log ${logId}:`, error);
           }
-        } catch (userLogError) {
-          console.error('Error fetching user logs:', userLogError);
+        }
+        
+        if (logs.length > 0) {
+          console.log(`Retrieved ${logs.length} logs by ID`);
+          return {
+            data: {
+              success: true,
+              logs,
+              source: 'direct-id-lookup'
+            }
+          };
         }
       }
-    } catch (error) {
-      console.error('Error in user log fetch attempt:', error);
+    } catch (idLookupError) {
+      console.error('Error in ID lookup attempt:', idLookupError);
     }
     
-    // Try to directly fetch specific log IDs we know exist
-    const attemptDirectFetch = async (logIds) => {
-      const logs = [];
-      for (const logId of logIds) {
-        try {
-          console.log(`Directly fetching log: ${logId}`);
-          const response = await api.get(`/logs/${logId}`);
-          if (response.data && response.data.success && response.data.log) {
-            console.log(`Successfully retrieved log: ${logId}`);
-            logs.push(response.data.log);
-          }
-        } catch (error) {
-          console.error(`Error fetching log ${logId}:`, error);
-        }
-      }
-      return logs;
-    };
-
-    // If we couldn't get user logs, fetch known logs one by one
-    console.log('Fetching logs individually...');
-    const logs = await attemptDirectFetch(knownLogIds);
+    // Final fallback: try to get logs by the action types we know work
+    // These are the action types observed in the console logs
+    const workingActionTypes = ['LOGIN', 'API_CALL', 'PAGE_VISIT', 'API_REQUEST', 'TEST_LOG'];
+    let allLogs = [];
     
-    console.log(`Retrieved ${logs.length} individual logs`);
+    for (const action of workingActionTypes) {
+      try {
+        console.log(`Fetching logs for action: ${action}`);
+        const response = await api.get(`/logs/action/${action}`);
+        
+        if (response.data && response.data.success && Array.isArray(response.data.logs)) {
+          console.log(`Retrieved ${response.data.logs.length} logs for action ${action}`);
+          // Add logs to combined result, avoiding duplicates
+          response.data.logs.forEach(log => {
+            if (!allLogs.some(existingLog => existingLog.id === log.id)) {
+              allLogs.push(log);
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`Error fetching logs for action ${action}:`, error);
+      }
+    }
+    
+    // Sort the combined logs by timestamp
+    allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    console.log(`Retrieved a total of ${allLogs.length} logs from fallback approach`);
     
     return { 
       data: { 
         success: true,
-        logs: logs 
+        logs: allLogs,
+        source: 'fallback'
       } 
     };
   }
