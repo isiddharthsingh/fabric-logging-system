@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { enrollAdmin } = require('./fabric/network');
 const loggingMiddleware = require('./middleware/loggingMiddleware');
+const kafkaConsumerService = require('./utils/kafkaConsumer');
 require('dotenv').config();
 
 // Import routes
@@ -52,6 +53,35 @@ async function startServer() {
       console.warn('Admin enrollment may have failed, check the logs for details');
     }
     
+    // Start the Kafka consumer to listen for events from secure-system
+    console.log('Starting Kafka consumer service...');
+    
+    // Test Kafka connection before trying to start the consumer
+    try {
+      console.log('Testing connection to Kafka before starting consumer...');
+      const connected = await kafkaConsumerService.testConnection(); 
+      
+      if (connected) {
+        console.log('Kafka connection successful, starting consumer...');
+        const started = await kafkaConsumerService.start();
+        
+        if (started) {
+          console.log('Kafka consumer started successfully!');
+        } else {
+          console.warn('Kafka connection was successful but consumer failed to start. The server will continue without Kafka integration.');
+        }
+      } else {
+        console.warn('Kafka connection test failed. The server will continue without Kafka integration.');
+        console.log('Ensure that:');
+        console.log('1. The secure-system is running (docker-compose up)');
+        console.log('2. Kafka is accessible at localhost:9092');
+        console.log('3. The "logs" topic exists in Kafka');
+      }
+    } catch (error) {
+      console.error('Error during Kafka setup:', error.message);
+      console.log('Server will continue without Kafka integration. Check your Kafka connection settings.');
+    }
+    
     // Start the server
     app.listen(PORT, HOST, () => {
       console.log(`Server running on http://${HOST}:${PORT}`);
@@ -66,6 +96,12 @@ async function startServer() {
     });
   } catch (error) {
     console.error('Failed to start server:', error);
+    // If we failed to start the server, make sure to stop any running Kafka consumer
+    try {
+      await kafkaConsumerService.stop();
+    } catch (err) {
+      console.error('Error stopping Kafka consumer:', err);
+    }
     process.exit(1);
   }
 }
