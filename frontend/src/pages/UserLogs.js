@@ -42,7 +42,17 @@ const UserLogs = () => {
     try {
       setLoading(true);
       const response = await logsApi.getLogsByUser(userId);
-      setLogs(response.data);
+      
+      // Access the logs array from the response structure
+      // The API returns {success: true, logs: [...], source: 'couchdb'}
+      if (response.data && response.data.logs) {
+        console.log(`Received ${response.data.logs.length} logs from ${response.data.source}`);
+        setLogs(response.data.logs);
+      } else {
+        console.warn('No logs found or unexpected response format:', response.data);
+        setLogs([]);
+      }
+      
       setLoading(false);
     } catch (err) {
       setError(`Failed to fetch logs for user ${userId}. Please try again later.`);
