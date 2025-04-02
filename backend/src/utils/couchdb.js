@@ -246,10 +246,60 @@ async function getLogsByActionFromCouchDB(action) {
   }
 }
 
+/**
+ * Get logs by user ID directly from CouchDB
+ * @param {string} userId User ID to filter logs by
+ * @returns {Promise<Array>} Array of logs for the specified user or empty array if none found
+ */
+async function getLogsByUserFromCouchDB(userId) {
+  try {
+    // Get nano instance
+    const nano = getCouchDBConnection();
+    const db = nano.use(COUCHDB_DATABASE);
+    
+    // Query design document/view if it exists
+    try {
+      // Check if we have a view for user queries
+      const designDoc = await db.get('_design/logs');
+      
+      if (designDoc && designDoc.views && designDoc.views.by_user) {
+        console.log('Using existing view for user queries');
+        const result = await db.view('logs', 'by_user', { key: userId, include_docs: true });
+        return result.rows.map(row => row.doc);
+      }
+    } catch (viewError) {
+      console.log('No view found for user queries, falling back to manual filtering');
+      // Continue to manual filtering if view doesn't exist
+    }
+    
+    // Fallback: Get all documents and filter by userId
+    console.log(`Filtering logs by userId: ${userId}`);
+    const allDocs = await db.list({ include_docs: true });
+    
+    if (!allDocs || !allDocs.rows) {
+      console.log('No logs found in CouchDB');
+      return [];
+    }
+    
+    // Filter docs by userId and map to log format
+    const logs = allDocs.rows
+      .filter(row => !row.id.startsWith('\u0000')) // Filter out system docs
+      .map(row => row.doc)
+      .filter(doc => doc.userId === userId);
+    
+    console.log(`Found ${logs.length} logs for user ${userId} in CouchDB`);
+    return logs;
+  } catch (error) {
+    console.error(`Error getting logs by user from CouchDB: ${error}`);
+    return [];
+  }
+}
+
 module.exports = {
   queryLogsFromCouchDB,
   getCouchDBConnection,
   COUCHDB_DATABASE,
   getLogByIdFromCouchDB,
-  getLogsByActionFromCouchDB
+  getLogsByActionFromCouchDB,
+  getLogsByUserFromCouchDB
 };
