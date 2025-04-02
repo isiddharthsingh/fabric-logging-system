@@ -5,6 +5,7 @@ const {
   queryLogsFromCouchDB, 
   getLogsByActionFromCouchDB, 
   getLogByIdFromCouchDB,
+  getLogsByUserFromCouchDB,
   getCouchDBConnection,
   COUCHDB_DATABASE
 } = require('../utils/couchdb');
