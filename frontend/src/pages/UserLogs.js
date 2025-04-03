@@ -38,7 +38,23 @@ const UserLogs = () => {
     try {
       setLoading(true);
       const response = await logsApi.getLogsByUser(userId);
-      setLogs(response.data);
+      
+      // Check and handle different response formats
+      if (response.data && Array.isArray(response.data)) {
+        // Direct array response
+        setLogs(response.data);
+      } else if (response.data && response.data.logs && Array.isArray(response.data.logs)) {
+        // Object with logs array property 
+        setLogs(response.data.logs);
+      } else if (response.data && response.data.success && response.data.logs && Array.isArray(response.data.logs)) {
+        // Success response format from our API
+        setLogs(response.data.logs);
+      } else {
+        // Empty or invalid response
+        console.warn('Received invalid logs data:', response.data);
+        setLogs([]);
+      }
+      
       setLoading(false);
     } catch (err) {
       setError(`Failed to fetch logs for user ${userId}. Please try again later.`);

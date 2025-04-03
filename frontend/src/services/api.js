@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3002';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -13,7 +13,20 @@ const api = axios.create({
 export const logsApi = {
   // Get all logs
   getAllLogs: async () => {
-    return api.get('/logs');
+    try {
+      // First try the standard getAllLogs endpoint
+      const response = await api.get('/logs');
+      // If logs array is empty, try the time range approach as fallback
+      if (response.data && response.data.success && Array.isArray(response.data.logs) && response.data.logs.length === 0) {
+        console.log('No logs found with primary method, trying time range approach...');
+        return getLogsByTimeRange();
+      }
+      return response;
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      // Fall back to time range approach
+      return getLogsByTimeRange();
+    }
   },
   
   // Get log by ID
@@ -44,6 +57,21 @@ export const logsApi = {
   // Create new log
   createLog: async (logData) => {
     return api.post('/logs', logData);
+  }
+};
+
+// Helper function to fetch logs by time range as a fallback
+const getLogsByTimeRange = async () => {
+  // Set a wide time range to capture all logs
+  const startTime = '2000-01-01T00:00:00Z'; // Far in the past
+  const endTime = new Date().toISOString();  // Current time
+  
+  try {
+    const response = await api.get(`/logs/timerange?startTime=${startTime}&endTime=${endTime}`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching logs by time range:', error);
+    throw error;
   }
 };
 

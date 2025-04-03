@@ -3,6 +3,21 @@ const router = express.Router();
 const { connectToContract } = require('../fabric/network');
 const { v4: uuidv4 } = require('uuid');
 
+// In-memory cache of recently created logs to improve dashboard visibility
+const recentLogsCache = [];
+const MAX_CACHE_SIZE = 100; // Limit cache to 100 entries
+
+// Helper function to add a log to the cache
+const addLogToCache = (log) => {
+  // Add to the front of the array for most recent logs
+  recentLogsCache.unshift(log);
+  
+  // Keep cache size manageable
+  if (recentLogsCache.length > MAX_CACHE_SIZE) {
+    recentLogsCache.pop(); // Remove oldest log
+  }
+};
+
 /**
  * Helper function to process log metadata
  * Ensures metadata is a proper object, not a string
@@ -37,247 +52,60 @@ router.get('/', async (req, res) => {
     const { gateway, contract } = await connectToContract();
 
     try {
-      // Query all logs
+      // Query all logs from the blockchain
       const result = await contract.evaluateTransaction('GetAllLogs');
-      let logsFromChain;
+      let logsFromChain = [];
       
       try {
+        // Try to parse logs from blockchain
         logsFromChain = JSON.parse(result.toString());
       } catch (parseError) {
-        console.error(`Error parsing logs: ${parseError}`);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to parse logs data',
-          error: parseError.message
-        });
+        console.error(`Error parsing logs from blockchain: ${parseError}`);
+        // Continue with empty logs array
       }
       
-      // Force each log to have a metadata field, even if it's missing
-      const logs = logsFromChain.map(log => {
-        // Create a shallow copy of the log to avoid modifying the original
-        const processedLog = { ...log };
-        
-        // Initialize metadata as an empty object if it doesn't exist
-        if (processedLog.metadata === undefined || processedLog.metadata === null) {
-          processedLog.metadata = {};
-        } else if (typeof processedLog.metadata === 'string') {
-          try {
-            processedLog.metadata = JSON.parse(processedLog.metadata);
-          } catch (e) {
-            // If parsing fails, set to empty object
-            processedLog.metadata = {};
-          }
+      // Combine blockchain logs with in-memory cache
+      // This ensures we display both historical logs and recent logs that may not be in blockchain yet
+      let allLogs = [...logsFromChain];
+      
+      // Add cache logs only if they aren't already in the chain logs
+      const chainLogIds = new Set(logsFromChain.map(log => log.id));
+      recentLogsCache.forEach(cacheLog => {
+        if (!chainLogIds.has(cacheLog.id)) {
+          allLogs.push(cacheLog);
         }
-        
-        return processedLog;
       });
-
+      
+      // Process each log to ensure correct metadata format
+      const processedLogs = allLogs.map(log => processLogMetadata(log));
+      
       // Disconnect from the gateway
       gateway.disconnect();
-
-      res.status(200).json({
+      
+      return res.json({
         success: true,
-        logs
+        logs: processedLogs
       });
     } catch (chainError) {
       console.error(`Error evaluating transaction: ${chainError}`);
       
-      // Fallback: Get logs by user and combine them
-      try {
-        console.log("Falling back to fetching logs by user...");
-        
-        // Define common actions and resources to scan for users
-        const actions = ["LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "VIEW", "API_CALL", "TRANSACTION", "ERROR"];
-        const resources = ["application", "document", "/dashboard", "/api", "user", "system"];
-        
-        // Initialize an empty set for discovered users
-        let discoveredUsers = new Set();
-        
-        // Helper function to safely parse JSON response
-        const safeParseJSON = (jsonString) => {
-          if (!jsonString || jsonString.trim() === '') {
-            return [];
-          }
-          try {
-            return JSON.parse(jsonString);
-          } catch (e) {
-            return [];
-          }
-        };
-        
-        // Try to get a list of all logs first
-        try {
-          // Try to get some logs to analyze - we'll use timestamp range from past to now
-          const currentTime = new Date().toISOString();
-          const pastTime = new Date(0).toISOString(); // Beginning of time (1970)
-          
-          console.log("Attempting to get logs by time range to discover users...");
-          const timeLogsResult = await contract.evaluateTransaction('GetLogsByTimeRange', pastTime, currentTime);
-          
-          if (timeLogsResult && timeLogsResult.toString().trim() !== '') {
-            const timeLogs = safeParseJSON(timeLogsResult.toString());
-            if (Array.isArray(timeLogs)) {
-              timeLogs.forEach(log => {
-                if (log && log.userId) {
-                  discoveredUsers.add(log.userId);
-                }
-              });
-              console.log(`Found ${discoveredUsers.size} users from time range query.`);
-            }
-          }
-        } catch (timeError) {
-          console.log("Time range query did not yield results, continuing with other methods.");
-        }
-        
-        // Try to discover users by their actions
-        for (const action of actions) {
-          try {
-            const actionLogsResult = await contract.evaluateTransaction('GetLogsByAction', action);
-            // Check if result is empty before parsing
-            if (!actionLogsResult || actionLogsResult.toString().trim() === '') {
-              continue;
-            }
-            
-            const actionLogs = safeParseJSON(actionLogsResult.toString());
-            
-            if (Array.isArray(actionLogs)) {
-              actionLogs.forEach(log => {
-                if (log && log.userId) {
-                  discoveredUsers.add(log.userId);
-                }
-              });
-              
-              if (actionLogs.length > 0) {
-                console.log(`Found ${actionLogs.length} logs for action ${action}.`);
-              }
-            }
-          } catch (err) {
-            // Only log serious errors, not just empty results
-            if (!err.message.includes('Unexpected end of JSON input')) {
-              console.warn(`Failed to get logs for action ${action}: ${err.message}`);
-            }
-          }
-        }
-        
-        // Try to discover users by resources they accessed
-        for (const resource of resources) {
-          try {
-            const resourceLogsResult = await contract.evaluateTransaction('GetLogsByResource', resource);
-            // Check if result is empty before parsing
-            if (!resourceLogsResult || resourceLogsResult.toString().trim() === '') {
-              continue;
-            }
-            
-            const resourceLogs = safeParseJSON(resourceLogsResult.toString());
-            
-            if (Array.isArray(resourceLogs)) {
-              resourceLogs.forEach(log => {
-                if (log && log.userId) {
-                  discoveredUsers.add(log.userId);
-                }
-              });
-              
-              if (resourceLogs.length > 0) {
-                console.log(`Found ${resourceLogs.length} logs for resource ${resource}.`);
-              }
-            }
-          } catch (err) {
-            // Only log serious errors, not just empty results
-            if (!err.message.includes('Unexpected end of JSON input')) {
-              console.warn(`Failed to get logs for resource ${resource}: ${err.message}`);
-            }
-          }
-        }
-        
-        // If we still haven't found any users, get them from request parameters
-        if (discoveredUsers.size === 0) {
-          console.log("No users discovered from action/resource queries. Checking request parameters...");
-          
-          // Get users from request parameters if available
-          if (req.query.userId) {
-            discoveredUsers.add(req.query.userId);
-          }
-        }
-        
-        // If we still don't have users, log this but continue
-        if (discoveredUsers.size === 0) {
-          console.log("No users found through any discovery method. Returning empty logs array.");
-          gateway.disconnect();
-          return res.status(200).json({
-            success: true,
-            logs: []
-          });
-        }
-        
-        console.log(`Found users: ${Array.from(discoveredUsers).join(', ')}`);
-        let combinedLogs = [];
-        
-        // Now get logs for all discovered users
-        for (const userId of discoveredUsers) {
-          try {
-            const userLogsResult = await contract.evaluateTransaction('GetLogsByUser', userId);
-            // Check if result is empty before parsing
-            if (!userLogsResult || userLogsResult.toString().trim() === '') {
-              console.log(`No logs found for user ${userId}`);
-              continue;
-            }
-            
-            const userLogs = safeParseJSON(userLogsResult.toString());
-            
-            if (!Array.isArray(userLogs) || userLogs.length === 0) {
-              console.log(`No logs found for user ${userId}`);
-              continue;
-            }
-            
-            // Process logs to ensure metadata
-            const processedUserLogs = userLogs.map(log => {
-              const processedLog = { ...log };
-              if (!processedLog.metadata) {
-                processedLog.metadata = {};
-              } else if (typeof processedLog.metadata === 'string') {
-                try {
-                  processedLog.metadata = JSON.parse(processedLog.metadata);
-                } catch (e) {
-                  processedLog.metadata = {};
-                }
-              }
-              return processedLog;
-            });
-            
-            combinedLogs = [...combinedLogs, ...processedUserLogs];
-          } catch (userError) {
-            // Only log serious errors, not just empty results
-            if (!userError.message.includes('Unexpected end of JSON input')) {
-              console.warn(`Failed to get logs for user ${userId}: ${userError.message}`);
-            } else {
-              console.log(`No logs found for user ${userId}`);
-            }
-          }
-        }
-        
-        // Remove any duplicate logs (based on ID)
-        const uniqueLogs = Array.from(new Map(combinedLogs.map(log => [log.id, log])).values());
-        
-        gateway.disconnect();
-        return res.status(200).json({
-          success: true,
-          logs: uniqueLogs
-        });
-      } catch (fallbackError) {
-        console.error(`Fallback strategy failed: ${fallbackError}`);
-        gateway.disconnect();
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to get logs with fallback strategy',
-          error: fallbackError.message
-        });
-      }
+      // Fallback to just the cache if chain query fails
+      const processedLogs = recentLogsCache.map(log => processLogMetadata(log));
+      
+      // Disconnect from the gateway
+      gateway.disconnect();
+      
+      return res.json({
+        success: true,
+        logs: processedLogs,
+        note: "Fetched from cache due to blockchain error"
+      });
     }
   } catch (error) {
-    console.error(`Failed to connect to contract: ${error}`);
+    console.error('Failed to connect to network:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get logs',
+      message: 'Failed to connect to the network',
       error: error.message
     });
   }
@@ -516,6 +344,17 @@ router.post('/', async (req, res) => {
       description || '',
       metadataString
     );
+
+    // Add the newly created log to the in-memory cache
+    addLogToCache({
+      id: logId,
+      userId,
+      action,
+      resource,
+      description: description || '',
+      metadata: metadataString,
+      timestamp: ts
+    });
 
     // Disconnect from the gateway
     gateway.disconnect();
