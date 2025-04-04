@@ -32,6 +32,41 @@ const LogsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   
+  const getAuthenticatedUser = () => {
+    // Try to get authentication data from localStorage
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const authData = JSON.parse(authStorage);
+        if (authData.state && authData.state.profile) {
+          return authData.state.profile;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to parse auth data:', error);
+      return null;
+    }
+  };
+  const renderUserName = (log) => {
+    // If this isn't an anonymous user, just show the userId
+    if (log.userId !== 'anonymous') {
+      return log.userId;
+    }
+    
+    // Check if we have authenticated user info
+    const authUser = getAuthenticatedUser();
+    
+    // If user is authenticated, show their email for ALL anonymous logs
+    // This is a frontend-only solution to ensure consistent display
+    if (authUser && authUser.email) {
+      return authUser.email;
+    }
+    
+    // Default display for anonymous users when not authenticated
+    return 'Futeur Guest User';
+  };
+
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -198,7 +233,7 @@ const LogsList = () => {
                     <TableCell>{log.id}</TableCell>
                     <TableCell>
                       <Link to={`/logs/user/${log.userId}`}>
-                        {log.userId}
+                        {renderUserName(log)}
                       </Link>
                     </TableCell>
                     <TableCell>

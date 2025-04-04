@@ -6,7 +6,7 @@ const KAFKA_BROKER = process.env.KAFKA_BROKER || 'localhost:9092';
 const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID || 'hyperledger-bridge';
 const KAFKA_CONSUMER_GROUP = process.env.KAFKA_CONSUMER_GROUP || 'hyperledger-bridge-group';
 const KAFKA_TOPIC = process.env.KAFKA_TOPIC || 'logs';
-const HYPERLEDGER_API_URL = process.env.HYPERLEDGER_API_URL || 'http://localhost:3000/api/logs';
+const HYPERLEDGER_API_URL = process.env.HYPERLEDGER_API_URL || 'http://localhost:3002/api/logs';
 
 console.clear();
 console.log('\n=== KAFKA TO HYPERLEDGER FABRIC BRIDGE ===');
