@@ -18,14 +18,23 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Button
+  Button,
+  Card,
+  CardContent,
+  InputAdornment,
+  Divider,
+  useTheme
 } from '@mui/material';
 import { logsApi } from '../services/api';
 import moment from 'moment';
 import usePageLogger from '../hooks/usePageLogger';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const LogsList = () => {
+  const theme = useTheme();
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -218,6 +227,14 @@ const LogsList = () => {
         return 'error';
       case 'CREATE':
         return 'info';
+      case 'UPDATE':
+        return 'info';
+      case 'DELETE':
+        return 'error';
+      case 'VIEW':
+        return 'primary';
+      case 'TEST_LOG':
+        return 'secondary';
       default:
         return 'default';
     }
@@ -225,46 +242,101 @@ const LogsList = () => {
 
   // Display loading state or logs table
   return (
-    <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" className="page-title">Logs</Typography>
+    <Box sx={{ mt: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3,
+        flexWrap: 'wrap',
+        gap: 2
+      }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>System Logs</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Complete log history for Hyperledger Fabric logging system
+          </Typography>
+        </Box>
         <Button 
-          variant="outlined" 
+          variant="contained" 
           startIcon={<RefreshIcon />} 
           onClick={fetchLogs}
           disabled={loading}
+          sx={{ 
+            borderRadius: '8px',
+            px: 2
+          }}
         >
           Refresh Logs
         </Button>
       </Box>
       
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-          <TextField
-            label="Search"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ minWidth: 200 }}
-          />
+      <Card sx={{ mb: 3, overflow: 'visible' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 3, 
+            flexWrap: 'wrap', 
+            gap: 2 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <AssessmentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Log Entries ({filteredLogs.length})</Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Search logs..."
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ 
+                  minWidth: 220,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                  }
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              <FormControl variant="outlined" size="small" sx={{ 
+                minWidth: 200,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                }
+              }}>
+                <InputLabel id="action-filter-label">Filter by Action</InputLabel>
+                <Select
+                  labelId="action-filter-label"
+                  id="action-filter"
+                  value={selectedAction}
+                  onChange={(e) => setSelectedAction(e.target.value)}
+                  label="Filter by Action"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <FilterListIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  }
+                >
+                  <MenuItem value="">All Actions</MenuItem>
+                  {availableActions.map(action => (
+                    <MenuItem key={action} value={action}>{action}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
           
-          <FormControl variant="outlined" size="small" sx={{ minWidth: 200 }}>
-            <InputLabel id="action-filter-label">Filter by Action</InputLabel>
-            <Select
-              labelId="action-filter-label"
-              id="action-filter"
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              label="Filter by Action"
-            >
-              <MenuItem value="">All Actions</MenuItem>
-              {availableActions.map(action => (
-                <MenuItem key={action} value={action}>{action}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+          <Divider sx={{ mb: 2 }} />
         
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -278,10 +350,30 @@ const LogsList = () => {
             </Paper>
           </Box>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ 
+            maxHeight: 'calc(100vh - 300px)',
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.1)',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(0,0,0,0.05)',
+            }
+          }}>
             <Table sx={{ minWidth: 650 }} aria-label="logs table">
               <TableHead>
-                <TableRow>
+                <TableRow sx={{ 
+                  backgroundColor: theme.palette.background.default,
+                  '& th': { 
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    fontSize: '0.875rem'
+                  }
+                }}>
                   <TableCell>ID</TableCell>
                   <TableCell>User</TableCell>
                   <TableCell>Action</TableCell>
@@ -294,10 +386,15 @@ const LogsList = () => {
                 {filteredLogs
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((log) => (
-                    <TableRow key={log.id} hover>
-                      <TableCell>{log.id}</TableCell>
+                    <TableRow key={log.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}>
+                      <TableCell sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>{log.id}</TableCell>
                       <TableCell>
-                        <Link to={`/logs/user/${log.userId}`}>
+                        <Link to={`/logs/user/${log.userId}`} style={{ 
+                          color: theme.palette.primary.main,
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                          '&:hover': { textDecoration: 'underline' }
+                        }}>
                           {log.userId}
                         </Link>
                       </TableCell>
@@ -306,17 +403,41 @@ const LogsList = () => {
                           label={log.action} 
                           color={getActionColor(log.action)} 
                           size="small" 
+                          sx={{ 
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            borderRadius: '4px',
+                            height: '24px'
+                          }}
                         />
                       </TableCell>
-                      <TableCell>{log.resource}</TableCell>
-                      <TableCell>{moment(log.timestamp).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                      <TableCell>{log.description}</TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem' }}>{log.resource}</TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
+                        {moment(log.timestamp).format('MM/DD/YYYY HH:mm:ss')}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem' }}>{log.description}</TableCell>
                     </TableRow>
                   ))}
                 {filteredLogs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      No logs found
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                        <FilterListIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+                        <Typography variant="body1" color="text.secondary">
+                          No logs found matching your criteria
+                        </Typography>
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          onClick={() => {
+                            setSearchTerm('');
+                            setSelectedAction('');
+                          }}
+                          sx={{ mt: 1, borderRadius: '8px' }}
+                        >
+                          Clear Filters
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 )}
@@ -324,16 +445,28 @@ const LogsList = () => {
             </Table>
           </TableContainer>
         )}
-      </Paper>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        component="div"
-        count={filteredLogs.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+        </CardContent>
+      </Card>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filteredLogs.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ 
+            '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+              fontSize: '0.875rem',
+              color: theme.palette.text.secondary
+            },
+            '.MuiTablePagination-select': {
+              fontSize: '0.875rem'
+            }
+          }}
+        />
+      </Box>
     </Box>
   );
 };
