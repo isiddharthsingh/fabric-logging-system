@@ -9,6 +9,7 @@ import LogsList from './pages/LogsList';
 import UserLogs from './pages/UserLogs';
 import CreateLog from './pages/CreateLog';
 import PageNotFound from './pages/PageNotFound';
+import WazuhPage from './pages/WazuhPage';
 
 // Components
 import Layout from './components/Layout';
@@ -26,6 +27,7 @@ function App() {
           <Route path="/logs" element={<LogsList />} />
           <Route path="/logs/user/:userId" element={<UserLogs />} />
           <Route path="/logs/create" element={<CreateLog />} />
+          <Route path="/wazuh" element={<WazuhPage />} />
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </Layout>

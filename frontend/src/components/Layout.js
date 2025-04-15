@@ -27,7 +27,8 @@ import {
   Assessment as AssessmentIcon,
   Notifications as NotificationsIcon,
   Settings as SettingsIcon,
-  Storage as StorageIcon
+  Storage as StorageIcon,
+  Security as SecurityIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 260;
@@ -46,6 +47,7 @@ function Layout({ children }) {
     { text: 'Logs', icon: <ListIcon />, path: '/logs' },
     { text: 'Create Log', icon: <AddIcon />, path: '/logs/create' },
     { divider: true },
+    { text: 'Wazuh', icon: <SecurityIcon />, path: '/wazuh' },
   ];
 
   const drawer = (

@@ -117,7 +117,7 @@ csr:
       O: Hyperledger
       OU: Fabric
   hosts:
-    - Mac-1141.lan
+    - SIDDHARTHs-MacBook-Pro.local
 
 #############################################################################
 #  Registration section used to register a new identity with fabric-ca server
