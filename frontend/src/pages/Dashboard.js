@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Typography, Grid, Paper, Box, CircularProgress, Button, Card, CardContent,
-  CardHeader, Divider, IconButton, useTheme, Chip, Stack, Tab, Tabs,
+  CardHeader, Divider, IconButton, useTheme, Chip,
   LinearProgress, Avatar, List, ListItem, ListItemText, ListItemAvatar,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField
 } from '@mui/material';
+import { useThemeMode } from '../contexts/ThemeContext';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line,
-  AreaChart, Area, Scatter, ScatterChart, ZAxis, RadarChart, Radar, PolarGrid,
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area, RadarChart, Radar, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { logsApi } from '../services/api';
@@ -21,7 +22,6 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import SecurityIcon from '@mui/icons-material/Security';
 import StorageIcon from '@mui/icons-material/Storage';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -31,18 +31,10 @@ import moment from 'moment';
 // Modern color palette for charts
 const COLORS = ['#3a36e0', '#ff5c93', '#00c853', '#ffaa00', '#0095ff', '#ff3d71', '#6f6fe9', '#ff8db7', '#5efc82', '#ffdd4b'];
 
-// Gradient colors for area charts
-const GRADIENTS = {
-  primary: ['#3a36e0', 'rgba(58, 54, 224, 0.2)'],
-  secondary: ['#ff5c93', 'rgba(255, 92, 147, 0.2)'],
-  success: ['#00c853', 'rgba(0, 200, 83, 0.2)'],
-  warning: ['#ffaa00', 'rgba(255, 170, 0, 0.2)'],
-  info: ['#0095ff', 'rgba(0, 149, 255, 0.2)'],
-  error: ['#ff3d71', 'rgba(255, 61, 113, 0.2)']
-};
 
 const Dashboard = () => {
   const theme = useTheme();
+  const { mode } = useThemeMode();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -617,7 +609,7 @@ const Dashboard = () => {
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>System Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
-            Monitoring and analytics for Hyperledger Fabric logging system
+            Monitoring and analytics system
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -1324,22 +1316,33 @@ const Dashboard = () => {
               action={
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Box sx={{ position: 'relative', width: 200, mr: 1 }}>
-                    <input
-                      type="text"
+                    <TextField
+                      size="small"
                       placeholder="Search user or 'all'"
                       value={timeChartUserQuery}
+                      variant="outlined"
+                      fullWidth
                       onChange={(e) => {
                         setTimeChartUserQuery(e.target.value);
                         if (e.target.value.toLowerCase() === 'all') {
                           setSelectedTimeChartUser('all');
                         }
                       }}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #e0e0e0',
-                        fontSize: '14px'
+                      InputProps={{
+                        sx: {
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: mode === 'light' ? 'white' : theme.palette.background.paper,
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: mode === 'light' ? '#e0e0e0' : 'rgba(255, 255, 255, 0.23)'
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: mode === 'light' ? '#bdbdbd' : 'rgba(255, 255, 255, 0.4)'
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.primary.main
+                          }
+                        }
                       }}
                     />
                     {timeChartUserQuery && timeChartUserQuery !== 'all' && (
@@ -1464,18 +1467,29 @@ const Dashboard = () => {
               title="User Session Analysis" 
               subheader="User engagement metrics"
               action={
-                <Box sx={{ width: 200, mr: 1 }}>
-                  <input
-                    type="text"
+                <Box sx={{ position: 'relative', width: 200 }}>
+                  <TextField
+                    size="small"
                     placeholder="Search user ID"
                     value={userSearchQuery}
+                    variant="outlined"
+                    fullWidth
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #e0e0e0',
-                      fontSize: '14px'
+                    InputProps={{
+                      sx: {
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        backgroundColor: mode === 'light' ? 'white' : theme.palette.background.paper,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: mode === 'light' ? '#e0e0e0' : 'rgba(255, 255, 255, 0.23)'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: mode === 'light' ? '#bdbdbd' : 'rgba(255, 255, 255, 0.4)'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.primary.main
+                        }
+                      }
                     }}
                   />
                 </Box>
