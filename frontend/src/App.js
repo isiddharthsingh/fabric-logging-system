@@ -1,7 +1,10 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+
+// Theme Context
+import { ThemeProvider, useThemeMode } from './contexts/ThemeContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -15,11 +18,15 @@ import WazuhPage from './pages/WazuhPage';
 import Layout from './components/Layout';
 
 // Import custom theme
-import theme from './theme';
+import createAppTheme from './theme';
 
-function App() {
+// App wrapper that uses ThemeContext
+function AppContent() {
+  const { mode } = useThemeMode();
+  const theme = React.useMemo(() => createAppTheme(mode), [mode]);
+
   return (
-    <ThemeProvider theme={theme}>
+    <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <Layout>
         <Routes>
@@ -31,6 +38,14 @@ function App() {
           <Route path="*" element={<PageNotFound />} />
         </Routes>
       </Layout>
+    </MuiThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
     </ThemeProvider>
   );
 }
