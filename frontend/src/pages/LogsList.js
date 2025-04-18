@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useThemeMode } from '../contexts/ThemeContext';
 import {
   Typography,
   Paper,
@@ -35,6 +36,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const LogsList = () => {
   const theme = useTheme();
+  const { mode } = useThemeMode();
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -254,7 +256,7 @@ const LogsList = () => {
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>System Logs</Typography>
           <Typography variant="body2" color="text.secondary">
-            Complete log history for Hyperledger Fabric logging system
+            Complete log history of the logs
           </Typography>
         </Box>
         <Button 
@@ -389,12 +391,16 @@ const LogsList = () => {
                     <TableRow key={log.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}>
                       <TableCell sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>{log.id}</TableCell>
                       <TableCell>
-                        <Link to={`/logs/user/${log.userId}`} style={{ 
-                          color: theme.palette.primary.main,
-                          textDecoration: 'none',
-                          fontWeight: 500,
-                          '&:hover': { textDecoration: 'underline' }
-                        }}>
+                        <Link 
+                          to={`/logs/user/${log.userId}`} 
+                          style={{ 
+                            color: mode === 'dark' ? '#a6c8ff' : theme.palette.primary.main, 
+                            textDecoration: 'none',
+                            fontWeight: 500,
+                          }}
+                          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                        >
                           {log.userId}
                         </Link>
                       </TableCell>
