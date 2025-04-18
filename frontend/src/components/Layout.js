@@ -105,21 +105,18 @@ function Layout({ children }) {
             sx={{ 
               width: 60, 
               height: 60, 
-              backgroundColor: 'white',
-              color: theme.palette.primary.main,
-              fontWeight: 'bold',
-              fontSize: '1.5rem'
+              backgroundColor: 'white'
             }}
-          >
-            FL
-          </Avatar>
+            src="/images/futeur-logo.png"
+            alt="Futeur Shield"
+          />
         </Box>
         <Box sx={{ textAlign: 'center', mt: 1 }}>
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            Fabric Logging
+            Futeur Shield
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
-            Hyperledger Fabric
+            Logging System 
           </Typography>
         </Box>
       </Box>
@@ -209,22 +206,19 @@ function Layout({ children }) {
               width: effectiveCollapsed ? 40 : 60, 
               height: effectiveCollapsed ? 40 : 60, 
               backgroundColor: 'white',
-              color: theme.palette.primary.main,
-              fontWeight: 'bold',
-              fontSize: effectiveCollapsed ? '1rem' : '1.5rem',
               transition: 'all 0.3s ease'
             }}
-          >
-            FL
-          </Avatar>
+            src="/images/futeur-logo.png"
+            alt="Futeur Shield"
+          />
         </Box>
         <Fade in={!effectiveCollapsed}>
           <Box sx={{ textAlign: 'center', mt: 1 }}>
             <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-              Fabric Logging
+              Futer Shield
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Hyperledger Fabric
+              Logging System
             </Typography>
           </Box>
         </Fade>
