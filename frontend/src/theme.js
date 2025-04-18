@@ -1,8 +1,9 @@
 import { createTheme } from '@mui/material/styles';
 
-// Modern color palette
-const theme = createTheme({
+// Function to create theme based on mode (light or dark)
+const createAppTheme = (mode) => createTheme({
   palette: {
+    mode,
     primary: {
       main: '#3a36e0',
       light: '#6f6fe9',
@@ -40,12 +41,26 @@ const theme = createTheme({
       contrastText: '#ffffff',
     },
     background: {
-      default: '#f7f9fc',
-      paper: '#ffffff',
+      ...(mode === 'light'
+        ? {
+            default: '#f7f9fc',
+            paper: '#ffffff',
+          }
+        : {
+            default: '#1a1a2e',
+            paper: '#252841',
+          }),
     },
     text: {
-      primary: '#2e3a59',
-      secondary: '#8f9bb3',
+      ...(mode === 'light'
+        ? {
+            primary: '#2e3a59',
+            secondary: '#8f9bb3',
+          }
+        : {
+            primary: '#f0f0f7',
+            secondary: '#a5a6c0',
+          }),
     },
     action: {
       active: '#3a36e0',
@@ -100,26 +115,32 @@ const theme = createTheme({
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
-          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.05)',
+        root: ({ theme }) => ({
+          boxShadow: theme.palette.mode === 'light' 
+            ? '0px 2px 10px rgba(0, 0, 0, 0.05)' 
+            : '0px 2px 10px rgba(0, 0, 0, 0.2)',
           borderRadius: 12,
-        },
+        }),
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           borderRadius: 12,
-          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.05)',
-        },
+          boxShadow: theme.palette.mode === 'light' 
+            ? '0px 2px 10px rgba(0, 0, 0, 0.05)' 
+            : '0px 2px 10px rgba(0, 0, 0, 0.2)',
+        }),
       },
     },
     MuiTableCell: {
       styleOverrides: {
-        head: {
+        head: ({ theme }) => ({
           fontWeight: 600,
-          backgroundColor: '#f7f9fc',
-        },
+          backgroundColor: theme.palette.mode === 'light' 
+            ? '#f7f9fc' 
+            : '#2a2d45',
+        }),
       },
     },
     MuiChip: {
@@ -133,4 +154,5 @@ const theme = createTheme({
   },
 });
 
-export default theme;
+// Export theme creator function
+export default createAppTheme;
