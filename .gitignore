@@ -16,6 +16,14 @@ frontend/node_modules/.cache/default-development/8.pack
 # Build artifacts
 /build
 /dist
+frontend/build/
+frontend/build/static/
+frontend/build/static/js/
+frontend/build/static/js/*.js
+frontend/build/static/js/*.js.map
+frontend/build/static/js/*.js.LICENSE.txt
+frontend/build/asset-manifest.json
+frontend/build/index.html
 
 # IDE files
 .idea/
