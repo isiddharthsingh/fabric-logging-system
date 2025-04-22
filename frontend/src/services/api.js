@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://134.199.178.80/api';
 
 // Get a user ID - in a real app, this would come from authentication
 const getUserId = () => {
@@ -18,7 +18,7 @@ const getUserId = () => {
 };
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
