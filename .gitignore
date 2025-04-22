@@ -42,3 +42,6 @@ logs
 # Large files
 *.pack
 #test
+
+# Fabric
+network.bak.*
