@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext';
 import {
   AppBar,
@@ -20,7 +21,9 @@ import {
   Tooltip,
   useTheme,
   Zoom,
-  Fade
+  Fade,
+  Menu,
+  MenuItem
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -33,7 +36,11 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   LightMode as LightModeIcon,
-  DarkMode as DarkModeIcon
+  DarkMode as DarkModeIcon,
+  Logout as LogoutIcon,
+  History as HistoryIcon,
+  AccountCircle as AccountCircleIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 260;
@@ -43,9 +50,37 @@ function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
+  const [anchorEl, setAnchorEl] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeMode();
+  const { user, logout } = useAuth();
+  
+  const handleUserMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+  
+  const handleLogout = () => {
+    handleUserMenuClose();
+    logout();
+    navigate('/login');
+  };
+  
+  const handleProfileClick = () => {
+    handleUserMenuClose();
+    // Navigate to profile page if you have one
+    // navigate('/profile');
+  };
+  
+  const handleLoginHistoryClick = () => {
+    handleUserMenuClose();
+    navigate('/login-history');
+  };
 
   // Handle window resize
   React.useEffect(() => {
@@ -341,8 +376,8 @@ function Layout({ children }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Fabric Logging System
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+            Futeur Shield
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -369,19 +404,92 @@ function Layout({ children }) {
                 <SettingsIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="User Profile">
-              <Avatar 
-                sx={{ 
-                  ml: 1,
-                  width: 36, 
-                  height: 36,
-                  bgcolor: theme.palette.primary.main,
-                  cursor: 'pointer'
+            <Box sx={{ position: 'relative' }}>
+              <Tooltip title={`User Menu`}>
+                <IconButton
+                  onClick={handleUserMenuOpen}
+                  color="inherit"
+                  size="large"
+                  aria-controls="user-menu"
+                  aria-haspopup="true"
+                >
+                  <Avatar 
+                    sx={{ 
+                      width: 36, 
+                      height: 36,
+                      bgcolor: theme.palette.primary.main,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
+              <Menu
+                id="user-menu"
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleUserMenuClose}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                PaperProps={{
+                  elevation: 3,
+                  sx: {
+                    mt: 1.5,
+                    minWidth: 180,
+                    borderRadius: 2,
+                    overflow: 'visible',
+                    '&:before': {
+                      content: '""',
+                      display: 'block',
+                      position: 'absolute',
+                      top: 0,
+                      right: 14,
+                      width: 10,
+                      height: 10,
+                      bgcolor: 'background.paper',
+                      transform: 'translateY(-50%) rotate(45deg)',
+                      zIndex: 0,
+                    },
+                  },
                 }}
               >
-                US
-              </Avatar>
-            </Tooltip>
+                <Box sx={{ px: 2, py: 1.5 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    {user?.username || 'User'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Administrator
+                  </Typography>
+                </Box>
+                <Divider />
+                <MenuItem onClick={handleProfileClick}>
+                  <ListItemIcon>
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Profile" />
+                </MenuItem>
+                <MenuItem onClick={handleLoginHistoryClick}>
+                  <ListItemIcon>
+                    <HistoryIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Login History" />
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Logout" />
+                </MenuItem>
+              </Menu>
+            </Box>
           </Box>
         </Toolbar>
       </AppBar>
