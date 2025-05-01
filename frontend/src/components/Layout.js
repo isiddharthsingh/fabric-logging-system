@@ -104,8 +104,7 @@ function Layout({ children }) {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Logs', icon: <ListIcon />, path: '/logs' },
     { text: 'Create Log', icon: <AddIcon />, path: '/logs/create' },
-    { divider: true },
-    { text: 'Wazuh', icon: <SecurityIcon />, path: '/wazuh' },
+    { divider: true }
   ];
   
   // Force collapsed view on mobile when drawer is closed
