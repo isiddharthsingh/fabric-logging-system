@@ -12,8 +12,6 @@ import Dashboard from './pages/Dashboard';
 import LogsList from './pages/LogsList';
 import UserLogs from './pages/UserLogs';
 import CreateLog from './pages/CreateLog';
-import PageNotFound from './pages/PageNotFound';
-import WazuhPage from './pages/WazuhPage';
 import Login from './pages/Login';
 import LoginHistory from './pages/LoginHistory';
 
@@ -64,13 +62,7 @@ function AppContent() {
             </Layout>
           </PrivateRoute>
         } />
-        <Route path="/wazuh" element={
-          <PrivateRoute>
-            <Layout>
-              <WazuhPage />
-            </Layout>
-          </PrivateRoute>
-        } />
+        
         <Route path="/login-history" element={
           <PrivateRoute>
             <Layout>
