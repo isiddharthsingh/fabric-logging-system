@@ -54,9 +54,11 @@ async function startServer() {
     }
     
     // Start the Kafka consumer to listen for events from secure-system
-    console.log('Starting Kafka consumer service...');
+    console.log('Kafka consumer service temporarily disabled...');
     
-    // Test Kafka connection before trying to start the consumer
+    /* 
+    // KAFKA INTEGRATION TEMPORARILY DISABLED
+    // Uncomment this block to re-enable the Kafka integration
     try {
       console.log('Testing connection to Kafka before starting consumer...');
       const connected = await kafkaConsumerService.testConnection(); 
@@ -81,6 +83,7 @@ async function startServer() {
       console.error('Error during Kafka setup:', error.message);
       console.log('Server will continue without Kafka integration. Check your Kafka connection settings.');
     }
+    */
     
     // Start the server
     app.listen(PORT, HOST, () => {
