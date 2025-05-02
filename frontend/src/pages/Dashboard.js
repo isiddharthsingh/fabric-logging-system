@@ -607,20 +607,22 @@ const Dashboard = () => {
         gap: 2
       }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>System Dashboard</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>System Dashboard</Typography>
           <Typography variant="body2" color="text.secondary">
             Monitoring and analytics system
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button 
             variant="outlined" 
             onClick={fetchLogs} 
             startIcon={<RefreshIcon />}
             sx={{ 
               borderRadius: '8px',
-              px: 2
+              px: 2,
+              fontSize: { xs: '0.8rem', sm: '0.875rem' }
             }}
+            size="medium"
           >
             Refresh Data
           </Button>
@@ -630,8 +632,10 @@ const Dashboard = () => {
             color="primary"
             sx={{ 
               borderRadius: '8px',
-              px: 2
+              px: 2,
+              fontSize: { xs: '0.8rem', sm: '0.875rem' }
             }}
+            size="medium"
           >
             Create Test Log
           </Button>
@@ -639,9 +643,19 @@ const Dashboard = () => {
       </Box>
       
       {/* System Health Overview */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: 3 }}>
         <Grid item xs={12} md={3}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <Card sx={{ 
+            height: '100%', 
+            position: 'relative', 
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <Box 
               sx={{ 
                 position: 'absolute', 
@@ -654,7 +668,7 @@ const Dashboard = () => {
             />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Total Logs</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Total Logs</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.primary.light, width: 40, height: 40 }}>
                   <StorageIcon fontSize="small" />
                 </Avatar>
@@ -678,7 +692,17 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={3}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <Card sx={{ 
+            height: '100%', 
+            position: 'relative', 
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <Box 
               sx={{ 
                 position: 'absolute', 
@@ -691,7 +715,7 @@ const Dashboard = () => {
             />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Success Rate</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Success Rate</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.success.light, width: 40, height: 40 }}>
                   <CheckCircleIcon fontSize="small" />
                 </Avatar>
@@ -716,7 +740,17 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={3}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <Card sx={{ 
+            height: '100%', 
+            position: 'relative', 
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <Box 
               sx={{ 
                 position: 'absolute', 
@@ -729,7 +763,7 @@ const Dashboard = () => {
             />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Warnings</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Warnings</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.warning.light, width: 40, height: 40 }}>
                   <WarningIcon fontSize="small" />
                 </Avatar>
@@ -753,7 +787,17 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={3}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <Card sx={{ 
+            height: '100%', 
+            position: 'relative', 
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <Box 
               sx={{ 
                 position: 'absolute', 
@@ -766,7 +810,7 @@ const Dashboard = () => {
             />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Errors</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Errors</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.error.light, width: 40, height: 40 }}>
                   <ErrorIcon fontSize="small" />
                 </Avatar>
@@ -791,9 +835,17 @@ const Dashboard = () => {
       </Grid>
       
       {/* Activity Trends */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: 3 }}>
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Activity Trends" 
               subheader="Log activity over the last 24 hours"
@@ -803,13 +855,13 @@ const Dashboard = () => {
                 </IconButton>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <AreaChart
                   data={timeStats}
                   margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
@@ -826,6 +878,11 @@ const Dashboard = () => {
                     tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
                     axisLine={{ stroke: '#E7EBF0' }}
                     tickLine={false}
+                    height={60}
+                    angle={-45}
+                    textAnchor="end"
+                    minTickGap={10}
+                    tickMargin={10}
                   />
                   <YAxis 
                     tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
@@ -855,7 +912,17 @@ const Dashboard = () => {
         
         {/* Recent Logs */}
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Card sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Recent Activity" 
               subheader="Latest log entries"
@@ -865,8 +932,8 @@ const Dashboard = () => {
                 </IconButton>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
@@ -922,8 +989,16 @@ const Dashboard = () => {
         </Grid>
         
         {/* Action Distribution */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={12}>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Actions Distribution" 
               subheader="Breakdown of log actions"
@@ -933,22 +1008,22 @@ const Dashboard = () => {
                 </IconButton>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={350}>
+                <PieChart margin={{ left: 0, right: 0, top: 10, bottom: 10 }}>
                   <Pie
                     data={actionStats}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={110}
-                    innerRadius={60}
+                    label={false}
+                    outerRadius={90}
+                    innerRadius={55}
                     paddingAngle={2}
                     fill="#8884d8"
                     dataKey="value"
@@ -974,8 +1049,19 @@ const Dashboard = () => {
                     verticalAlign="middle" 
                     align="right"
                     wrapperStyle={{
-                      paddingLeft: '10px'
+                      paddingLeft: "10px",
+                      fontSize: "0.85rem",
+                      lineHeight: "1.5rem"
                     }}
+                    iconSize={10}
+                    iconType="circle"
+                    itemStyle={{
+                      marginBottom: 10,
+                      paddingTop: 2,
+                      paddingBottom: 2,
+                      lineHeight: "20px"
+                    }}
+                    formatter={(value, entry) => `${value}: ${(entry.payload.percent * 100).toFixed(0)}%`}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -984,8 +1070,16 @@ const Dashboard = () => {
         </Grid>
         
         {/* Resource Usage */}
-        <Grid item xs={12} md={6}>
-          <Card>
+        <Grid item xs={12} md={12}>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Resource Usage" 
               subheader="Most accessed resources"
@@ -995,16 +1089,16 @@ const Dashboard = () => {
                 </IconButton>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart
                   data={resourceStats.slice(0, 5)}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
                   barSize={40}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
@@ -1012,9 +1106,14 @@ const Dashboard = () => {
                     dataKey="name" 
                     scale="point" 
                     padding={{ left: 20, right: 20 }}
-                    tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: { xs: 10, sm: 12 } }}
                     axisLine={{ stroke: '#E7EBF0' }}
                     tickLine={false}
+                    height={60}
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    tickMargin={10}
                   />
                   <YAxis 
                     tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
@@ -1028,7 +1127,6 @@ const Dashboard = () => {
                       border: 'none'
                     }} 
                   />
-                  <Legend />
                   <Bar 
                     dataKey="value" 
                     fill={theme.palette.primary.main}
@@ -1042,26 +1140,17 @@ const Dashboard = () => {
 
         {/* User Retention Section */}
         <Grid item xs={12} md={12}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 2, mb: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 2, mb: 2, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
             User Retention Insights
           </Typography>
         </Grid>
         
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-            <Box 
-              sx={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                width: '100%', 
-                height: '4px', 
-                bgcolor: theme.palette.primary.main 
-              }}
-            />
+          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' } }}>
+            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', bgcolor: theme.palette.primary.main }} />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Retention Rate</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Retention Rate</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.primary.light, width: 40, height: 40 }}>
                   <RepeatIcon fontSize="small" />
                 </Avatar>
@@ -1075,20 +1164,11 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-            <Box 
-              sx={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                width: '100%', 
-                height: '4px', 
-                bgcolor: theme.palette.success.main 
-              }}
-            />
+          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' } }}>
+            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', bgcolor: theme.palette.success.main }} />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>Returning Users</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>Returning Users</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.success.light, width: 40, height: 40 }}>
                   <PersonAddIcon fontSize="small" />
                 </Avatar>
@@ -1102,20 +1182,11 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-            <Box 
-              sx={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: 0, 
-                width: '100%', 
-                height: '4px', 
-                bgcolor: theme.palette.warning.main 
-              }}
-            />
+          <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease', '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.08)' } }}>
+            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', bgcolor: theme.palette.warning.main }} />
             <CardContent sx={{ py: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>One-Time Users</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>One-Time Users</Typography>
                 <Avatar sx={{ bgcolor: theme.palette.warning.light, width: 40, height: 40 }}>
                   <PersonOffIcon fontSize="small" />
                 </Avatar>
@@ -1129,9 +1200,17 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Top Users by Visit Frequency</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Top Users by Visit Frequency</Typography>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -1151,9 +1230,17 @@ const Dashboard = () => {
         </Grid>
         
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>User Retention Details</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>User Retention Details</Typography>
               <TableContainer sx={{ maxHeight: 300 }}>
                 <Table size="small">
                   <TableHead>
@@ -1188,7 +1275,15 @@ const Dashboard = () => {
         
         {/* User Activity */}
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="User Activity" 
               subheader={userActivityView === 'most' ? "Most active users" : "Least active users"}
@@ -1207,13 +1302,13 @@ const Dashboard = () => {
                 </Button>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart
                   data={userActivityView === 'most' ? userStats.slice(0, 10) : [...userStats].reverse().slice(0, 10)}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -1254,7 +1349,15 @@ const Dashboard = () => {
         
         {/* Error Analysis */}
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Error Analysis" 
               subheader="Resources with errors"
@@ -1264,14 +1367,14 @@ const Dashboard = () => {
                 </IconButton>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
               {errorStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   <RadarChart outerRadius={90} data={errorStats.slice(0, 5)}>
                     <PolarGrid stroke="#e0e0e0" />
                     <PolarAngleAxis dataKey="name" tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
@@ -1306,10 +1409,18 @@ const Dashboard = () => {
       </Grid>
       
       {/* New Insights Section */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, md: 3 }}>
         {/* Period Comparison */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="Time Comparison" 
               subheader="Current vs Previous Period"
@@ -1415,13 +1526,13 @@ const Dashboard = () => {
                 </Box>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart
                   data={
                     selectedTimeChartUser === 'all' ?
@@ -1462,7 +1573,15 @@ const Dashboard = () => {
         
         {/* User Session Analysis */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ 
+            height: '100%',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: '1px solid rgba(0,0,0,0.08)'
+            }
+          }}>
             <CardHeader 
               title="User Session Analysis" 
               subheader="User engagement metrics"
@@ -1495,8 +1614,8 @@ const Dashboard = () => {
                 </Box>
               }
               sx={{ 
-                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: '1.1rem' },
-                '& .MuiCardHeader-subheader': { fontSize: '0.85rem' }
+                '& .MuiCardHeader-title': { fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.25rem' } },
+                '& .MuiCardHeader-subheader': { fontSize: { xs: '0.85rem', sm: '0.95rem' } }
               }}
             />
             <Divider />

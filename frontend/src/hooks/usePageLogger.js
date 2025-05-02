@@ -13,12 +13,15 @@ const usePageLogger = (pageName, additionalData = {}) => {
   useEffect(() => {
     // Log page visit when component mounts or route changes
     const logVisit = async () => {
-      await logPageVisit(pageName, {
-        ...additionalData,
-        path: location.pathname,
-        search: location.search,
-        hash: location.hash
-      });
+      // Skip logging for dashboard pages
+      if (pageName !== 'LogsList' && pageName !== 'Dashboard') {
+        await logPageVisit(pageName, {
+          ...additionalData,
+          path: location.pathname,
+          search: location.search,
+          hash: location.hash
+        });
+      }
     };
     
     logVisit();
@@ -27,7 +30,7 @@ const usePageLogger = (pageName, additionalData = {}) => {
     return () => {
       // Could implement page exit logging here if desired
     };
-  }, [pageName, location.pathname, location.search, location.hash, additionalData]);
+  }, [pageName, additionalData, location]);
 };
 
 export default usePageLogger;
