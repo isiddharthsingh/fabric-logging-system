@@ -5,6 +5,16 @@ const { v4: uuidv4 } = require('uuid');
  * Middleware to automatically log all API requests to the Hyperledger Fabric blockchain
  */
 const loggingMiddleware = async (req, res, next) => {
+  // Skip logging for dashboard-related endpoints, log API requests, and requests with skip-logging header
+  if (req.originalUrl.includes('/dashboard') || 
+      req.originalUrl.includes('/api/status') || 
+      req.originalUrl.includes('/api/metrics') ||
+      req.originalUrl.includes('/api/logs') ||
+      req.headers['x-skip-logging'] === 'true') {
+    // Continue to the next middleware without logging
+    return next();
+  }
+
   // Store the original end method
   const originalEnd = res.end;
   
@@ -17,21 +27,50 @@ const loggingMiddleware = async (req, res, next) => {
   // Generate a random user ID if not available
   const userId = req.headers['user-id'] || 'anonymous';
   
+  // Determine if this is a user information update request
+  const isUserInfoUpdate = 
+    (req.originalUrl.includes('/user') || req.originalUrl.includes('/profile')) ||
+    (req.method === 'PUT' || req.method === 'POST' || req.method === 'PATCH') && 
+    (req.body && 
+      (req.body.userInfo || 
+       req.body.userUpdate || 
+       req.body.profileUpdate || 
+       JSON.stringify(req.body).toLowerCase().includes('user') && 
+       JSON.stringify(req.body).toLowerCase().includes('update'))
+    );
+
+  // Determine if this is a success message
+  const isSuccessMessage = 
+    (req.originalUrl.includes('/login') || req.originalUrl.includes('/auth/signin')) ||
+    (req.body && 
+      (JSON.stringify(req.body).toLowerCase().includes('success') || 
+       JSON.stringify(req.body).toLowerCase().includes('login') ||
+       JSON.stringify(req.body).toLowerCase().includes('signin'))
+    );
+
   // Create log data structure
   const logData = {
     id: uuidv4(),
     userId: userId,
-    action: 'API_REQUEST',
+    action: isUserInfoUpdate ? 'USER_ACTION_COMPLETED' : isSuccessMessage ? 'LOGIN' : 'API_REQUEST',
     resource: req.originalUrl,
     timestamp: startTime.toISOString(),
-    description: `${req.method} request to ${req.originalUrl}`,
+    description: isUserInfoUpdate 
+      ? `[HIGH] User information updated` 
+      : isSuccessMessage
+      ? `[MEDIUM] User logged in successfully` 
+      : `${req.method} request to ${req.originalUrl}`,
     metadata: {
       ip: clientIp,
       method: req.method,
       userAgent: req.headers['user-agent'],
       requestBody: req.method !== 'GET' ? JSON.stringify(req.body) : null,
       statusCode: null,
-      responseTime: null
+      responseTime: null,
+      severity: isUserInfoUpdate ? 'HIGH' : isSuccessMessage ? 'MEDIUM' : 'LOW',
+      priorityLevel: isUserInfoUpdate ? 'HIGH' : isSuccessMessage ? 'MEDIUM' : 'LOW',
+      userInfoUpdate: isUserInfoUpdate ? true : undefined,
+      successMessage: isSuccessMessage ? true : undefined
     }
   };
   
@@ -59,8 +98,8 @@ const loggingMiddleware = async (req, res, next) => {
             logData.metadata = JSON.stringify(logData.metadata);
           }
           
-          // Create the log in the blockchain
-          await contract.submitTransaction(
+          // Prepare the log parameters for the blockchain
+          const logParams = [
             'CreateLog',
             logData.id,
             logData.userId,
@@ -69,7 +108,16 @@ const loggingMiddleware = async (req, res, next) => {
             logData.timestamp,
             logData.description,
             logData.metadata
-          );
+          ];
+          
+          // Add severity parameter if it's a user information update
+          if (isUserInfoUpdate) {
+            // Log with HIGH severity
+            console.log(`Creating HIGH priority log for user information update: ${req.method} ${req.originalUrl}`);
+          }
+          
+          // Create the log in the blockchain
+          await contract.submitTransaction(...logParams);
           
           console.log(`Automatic log created for ${req.method} ${req.originalUrl}`);
         } catch (error) {
