@@ -47,13 +47,13 @@ const LogsList = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [availableActions, setAvailableActions] = useState([
     'LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 
-    'API_CALL', 'PAGE_VISIT', 'API_REQUEST', 'TEST_LOG', 'ERROR'
+    'API_CALL', 'API_REQUEST', 'PAGE_VISIT', 'TEST_LOG', 'ERROR'
   ]);
 
   // Hard-coded action types that should always be shown
   const defaultActionTypes = [
     'LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 
-    'API_CALL', 'PAGE_VISIT', 'API_REQUEST', 'TEST_LOG', 'ERROR'
+    'API_CALL', 'API_REQUEST', 'PAGE_VISIT', 'TEST_LOG', 'ERROR'
   ];
 
   // Automatically log this page visit
@@ -242,6 +242,130 @@ const LogsList = () => {
     }
   };
 
+  const getSeverityColor = (severity) => {
+    switch (severity) {
+      case 'HIGH':
+        return 'error';
+      case 'MEDIUM':
+        return 'warning';
+      case 'LOW':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
+
+  const getEffectiveSeverity = (log) => {
+    // First check if log has a direct severity property
+    if (log.severity) {
+      return log.severity;
+    }
+    
+    // Check for severity encoded in the description field
+    if (log.description) {
+      if (log.description.startsWith('[HIGH]')) {
+        return 'HIGH';
+      }
+      if (log.description.startsWith('[MEDIUM]')) {
+        return 'MEDIUM';
+      }
+    }
+    
+    // Special case for the exact pattern currently in production for user info updates
+    if (log.action === 'USER_ACTION_COMPLETED' && 
+        log.description && 
+        log.description.toLowerCase().includes('user information')) {
+      return 'HIGH';
+    }
+    
+    // Special case for login/success messages
+    if (log.action === 'LOGIN' || 
+        (log.description && 
+         (log.description.toLowerCase().includes('success') || 
+          log.description.toLowerCase().includes('logged in') || 
+          log.description.toLowerCase().includes('sign in')))) {
+      return 'MEDIUM';
+    }
+    
+    // Then check in metadata (might be stored there from the backend)
+    if (log.metadata) {
+      if (typeof log.metadata === 'string') {
+        try {
+          const parsedMetadata = JSON.parse(log.metadata);
+          if (parsedMetadata.severity) {
+            return parsedMetadata.severity;
+          }
+          if (parsedMetadata.priorityLevel) {
+            return parsedMetadata.priorityLevel;
+          }
+          if (parsedMetadata.successMessage) {
+            return 'MEDIUM';
+          }
+        } catch (e) {
+          // Failed to parse metadata, continue with other checks
+        }
+      } else if (typeof log.metadata === 'object') {
+        if (log.metadata.severity) {
+          return log.metadata.severity;
+        }
+        if (log.metadata.priorityLevel) {
+          return log.metadata.priorityLevel;
+        }
+        if (log.metadata.successMessage) {
+          return 'MEDIUM';
+        }
+      }
+    }
+    
+    // Check for user information update patterns
+    if ((log.action === 'INFO' || log.action === 'UPDATE_USER') && 
+        (log.description && log.description.toLowerCase().includes('user information'))) {
+      return 'HIGH';
+    }
+    
+    // Default severity
+    return 'LOW';
+  };
+
+  // Custom styling for severity chips based on severity level
+  const getSeverityChipStyle = (severity) => {
+    const baseStyle = {
+      fontWeight: 500,
+      fontSize: '0.75rem',
+      borderRadius: '4px',
+      height: '24px'
+    };
+    
+    // Custom styling for different severity levels
+    if (severity === 'LOW') {
+      return {
+        ...baseStyle,
+        backgroundColor: 'rgba(3, 169, 244, 0.15)',
+        color: '#0288d1',
+        border: '1px solid rgba(3, 169, 244, 0.5)',
+        boxShadow: '0 0 5px rgba(3, 169, 244, 0.4)'
+      };
+    } else if (severity === 'MEDIUM') {
+      return {
+        ...baseStyle,
+        backgroundColor: 'rgba(255, 193, 7, 0.15)',
+        color: '#f57c00',
+        border: '1px solid rgba(255, 193, 7, 0.5)',
+        boxShadow: '0 0 5px rgba(255, 193, 7, 0.4)'
+      };
+    } else if (severity === 'HIGH') {
+      return {
+        ...baseStyle,
+        backgroundColor: 'rgba(244, 67, 54, 0.15)',
+        color: '#d32f2f',
+        border: '1px solid rgba(244, 67, 54, 0.5)',
+        boxShadow: '0 0 5px rgba(244, 67, 54, 0.4)'
+      };
+    }
+    
+    return baseStyle;
+  };
+
   // Display loading state or logs table
   return (
     <Box sx={{ mt: 2 }}>
@@ -254,7 +378,7 @@ const LogsList = () => {
         gap: 2
       }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5 }}>System Logs</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>System Logs</Typography>
           <Typography variant="body2" color="text.secondary">
             Complete log history of the logs
           </Typography>
@@ -266,15 +390,17 @@ const LogsList = () => {
           disabled={loading}
           sx={{ 
             borderRadius: '8px',
-            px: 2
+            px: 2,
+            fontSize: { xs: '0.8rem', sm: '0.875rem' }
           }}
+          size="medium"
         >
           Refresh Logs
         </Button>
       </Box>
       
       <Card sx={{ mb: 3, overflow: 'visible' }}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -285,10 +411,10 @@ const LogsList = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <AssessmentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>Log Entries ({filteredLogs.length})</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>Log Entries ({filteredLogs.length})</Typography>
             </Box>
             
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
               <TextField
                 placeholder="Search logs..."
                 variant="outlined"
@@ -296,7 +422,7 @@ const LogsList = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 sx={{ 
-                  minWidth: 220,
+                  minWidth: { xs: '100%', sm: 220 },
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
                   }
@@ -311,7 +437,7 @@ const LogsList = () => {
               />
               
               <FormControl variant="outlined" size="small" sx={{ 
-                minWidth: 200,
+                minWidth: { xs: '100%', sm: 200 },
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',
                 }
@@ -353,10 +479,12 @@ const LogsList = () => {
           </Box>
         ) : (
           <TableContainer sx={{ 
-            maxHeight: 'calc(100vh - 300px)',
+            maxHeight: { xs: 'calc(100vh - 350px)', sm: 'calc(100vh - 300px)' },
             overflowY: 'auto',
+            overflowX: 'auto',
             '&::-webkit-scrollbar': {
               width: '8px',
+              height: '8px'
             },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: 'rgba(0,0,0,0.1)',
@@ -366,20 +494,23 @@ const LogsList = () => {
               backgroundColor: 'rgba(0,0,0,0.05)',
             }
           }}>
-            <Table sx={{ minWidth: 650 }} aria-label="logs table">
+            <Table sx={{ minWidth: 650 }} aria-label="logs table" size="medium">
               <TableHead>
                 <TableRow sx={{ 
                   backgroundColor: theme.palette.background.default,
                   '& th': { 
                     fontWeight: 600,
                     color: theme.palette.text.primary,
-                    fontSize: '0.875rem'
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    whiteSpace: 'nowrap',
+                    padding: { xs: '8px 6px', sm: '16px' }
                   }
                 }}>
                   <TableCell>ID</TableCell>
                   <TableCell>User</TableCell>
                   <TableCell>Action</TableCell>
                   <TableCell>Resource</TableCell>
+                  <TableCell>Severity</TableCell>
                   <TableCell>Timestamp</TableCell>
                   <TableCell>Description</TableCell>
                 </TableRow>
@@ -389,14 +520,29 @@ const LogsList = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((log) => (
                     <TableRow key={log.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}>
-                      <TableCell sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>{log.id}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ 
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
+                        color: theme.palette.text.secondary,
+                        padding: { xs: '8px 6px', sm: '16px' },
+                        maxWidth: { xs: '80px', sm: '150px' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>{log.id}</TableCell>
+                      <TableCell sx={{ 
+                        padding: { xs: '8px 6px', sm: '16px' },
+                        maxWidth: { xs: '80px', sm: '120px' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
                         <Link 
                           to={`/logs/user/${log.userId}`} 
                           style={{ 
                             color: mode === 'dark' ? '#a6c8ff' : theme.palette.primary.main, 
                             textDecoration: 'none',
                             fontWeight: 500,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
                           }}
                           onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
                           onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
@@ -404,29 +550,60 @@ const LogsList = () => {
                           {log.userId}
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ padding: { xs: '8px 6px', sm: '16px' } }}>
                         <Chip 
                           label={log.action} 
                           color={getActionColor(log.action)} 
                           size="small" 
                           sx={{ 
                             fontWeight: 500,
-                            fontSize: '0.75rem',
+                            fontSize: { xs: '0.65rem', sm: '0.75rem' },
                             borderRadius: '4px',
-                            height: '24px'
+                            height: { xs: '20px', sm: '24px' }
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.875rem' }}>{log.resource}</TableCell>
-                      <TableCell sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
+                      <TableCell sx={{ 
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                        padding: { xs: '8px 6px', sm: '16px' },
+                        maxWidth: { xs: '80px', sm: '150px' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>{log.resource}</TableCell>
+                      <TableCell sx={{ padding: { xs: '8px 6px', sm: '16px' } }}>
+                        <Chip 
+                          label={getEffectiveSeverity(log)} 
+                          color={getSeverityColor(getEffectiveSeverity(log))} 
+                          size="small" 
+                          sx={{
+                            ...getSeverityChipStyle(getEffectiveSeverity(log)),
+                            fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                            height: { xs: '20px', sm: '24px' }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ 
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
+                        color: theme.palette.text.secondary,
+                        padding: { xs: '8px 6px', sm: '16px' },
+                        whiteSpace: 'nowrap'
+                      }}>
                         {moment(log.timestamp).format('MM/DD/YYYY HH:mm:ss')}
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.875rem' }}>{log.description}</TableCell>
+                      <TableCell sx={{ 
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                        padding: { xs: '8px 6px', sm: '16px' },
+                        maxWidth: { xs: '120px', sm: '200px' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>{log.description}</TableCell>
                     </TableRow>
                   ))}
                 {filteredLogs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                         <FilterListIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
                         <Typography variant="body1" color="text.secondary">
@@ -464,11 +641,8 @@ const LogsList = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
           sx={{ 
             '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
-              fontSize: '0.875rem',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
               color: theme.palette.text.secondary
-            },
-            '.MuiTablePagination-select': {
-              fontSize: '0.875rem'
             }
           }}
         />
