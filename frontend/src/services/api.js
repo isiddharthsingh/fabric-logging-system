@@ -27,9 +27,22 @@ const api = axios.create({
 // Add request interceptor for automatic logging and user ID
 api.interceptors.request.use(
   config => {
-    // Set the user ID header for backend automatic logging
-    const userId = getUserId();
-    config.headers['user-id'] = userId;
+    // Skip logging for dashboard-related endpoints and log API calls
+    const skipLogging = 
+      config.url.includes('/logs') || 
+      config.url.includes('/dashboard') ||
+      config.url.includes('/status') ||
+      config.url.includes('/metrics');
+    
+    if (!skipLogging) {
+      // Set the user ID header for backend automatic logging
+      const userId = getUserId();
+      config.headers['user-id'] = userId;
+    } else {
+      // For dashboard/logs requests, use a special header to signal
+      // to the backend that this request should not be logged
+      config.headers['x-skip-logging'] = 'true';
+    }
     
     return config;
   },
