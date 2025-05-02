@@ -482,7 +482,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { userId, action, resource, description, metadata } = req.body;
+    const { userId, action, resource, description, metadata, severity } = req.body;
 
     // Validate required fields
     if (!userId || !action || !resource) {
@@ -492,20 +492,103 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Determine if this is a user information update request 
+    const isUserInfoUpdate = 
+      (action === 'USER_ACTION_COMPLETED' || action === 'UPDATE_USER' || action === 'INFO') &&
+      (description && description.toLowerCase().includes('user information')) ||
+      (resource && (resource.includes('/user') || resource.includes('/profile'))) ||
+      (metadata && (
+        (typeof metadata === 'object' && 
+          (metadata.userInfoUpdate || 
+           metadata.userUpdate || 
+           metadata.profileUpdate)
+        ) ||
+        (typeof metadata === 'string' && 
+          (metadata.includes('userInfoUpdate') || 
+           metadata.includes('userUpdate') || 
+           metadata.includes('profileUpdate'))
+        )
+      ));
+
+    // Determine if this is a success message
+    const isSuccessMessage = 
+      action === 'LOGIN' || 
+      (description && (
+        description.toLowerCase().includes('success') ||
+        description.toLowerCase().includes('logged in') ||
+        description.toLowerCase().includes('sign in')
+      )) ||
+      (resource && (
+        resource.includes('/login') ||
+        resource.includes('/auth') ||
+        resource.includes('/signin')
+      )) ||
+      (metadata && (
+        (typeof metadata === 'object' && 
+          (metadata.successMessage || 
+           metadata.success || 
+           metadata.login)
+        ) ||
+        (typeof metadata === 'string' && 
+          (metadata.includes('success') || 
+           metadata.includes('login') || 
+           metadata.includes('signin'))
+        )
+      ));
+
     // Validate metadata is valid JSON if provided
     let metadataString = '{}';
     if (metadata) {
       try {
         // If metadata is already a string, use it; otherwise, stringify it
-        metadataString = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
-        // Validate by parsing it
-        JSON.parse(metadataString);
+        if (typeof metadata === 'string') {
+          // Validate by parsing it
+          JSON.parse(metadata);
+          metadataString = metadata;
+        } else {
+          // For user information updates, add HIGH severity to metadata
+          if (isUserInfoUpdate) {
+            metadata.severity = 'HIGH';
+            metadata.priorityLevel = 'HIGH';
+            metadata.userInfoUpdate = true;
+          } else if (isSuccessMessage) {
+            // For success messages, add MEDIUM severity
+            metadata.severity = 'MEDIUM';
+            metadata.priorityLevel = 'MEDIUM';
+            metadata.successMessage = true;
+          } else {
+            // For all other logs, set LOW severity by default
+            metadata.severity = 'LOW';
+            metadata.priorityLevel = 'LOW';
+          }
+          metadataString = JSON.stringify(metadata);
+        }
       } catch (error) {
         return res.status(400).json({
           success: false,
           message: 'metadata must be valid JSON'
         });
       }
+    } else if (isUserInfoUpdate) {
+      // If no metadata provided but this is a user info update, create it with HIGH severity
+      metadataString = JSON.stringify({
+        severity: 'HIGH',
+        priorityLevel: 'HIGH',
+        userInfoUpdate: true
+      });
+    } else if (isSuccessMessage) {
+      // If no metadata provided but this is a success message, create it with MEDIUM severity
+      metadataString = JSON.stringify({
+        severity: 'MEDIUM',
+        priorityLevel: 'MEDIUM',
+        successMessage: true
+      });
+    } else {
+      // If no metadata provided and not a special case, create it with LOW severity
+      metadataString = JSON.stringify({
+        severity: 'LOW',
+        priorityLevel: 'LOW'
+      });
     }
 
     // Set timestamp to current time if not provided
@@ -515,7 +598,21 @@ router.post('/', async (req, res) => {
     const { gateway, contract } = await connectToContract();
 
     // Generate a unique log ID
-    const logId = `LOG${uuidv4().replace(/-/g, '').substring(0, 12)}`;
+    const logId = req.body.id || `LOG${uuidv4().replace(/-/g, '').substring(0, 12)}`;
+
+    // For user information updates, modify the description if needed
+    let finalDescription = description || '';
+    
+    if (isUserInfoUpdate && !description.includes('[HIGH]')) {
+      finalDescription = `[HIGH] User information updated`;
+    } else if (isSuccessMessage && !description.includes('[MEDIUM]')) {
+      finalDescription = `[MEDIUM] User logged in successfully`;
+    }
+
+    console.log(`Creating log: ${logId}, Action: ${action}, isUserInfoUpdate: ${isUserInfoUpdate}`);
+    if (isUserInfoUpdate) {
+      console.log('Setting HIGH priority for user information update');
+    }
 
     // Submit transaction to create log
     await contract.submitTransaction(
@@ -524,7 +621,7 @@ router.post('/', async (req, res) => {
       userId,
       action,
       resource,
-      description || '',
+      finalDescription,
       metadataString
     );
 
